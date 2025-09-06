@@ -1,65 +1,73 @@
+/**
+ * @file tle493d_w2b6_corrected.cpp
+ * @brief Corrected example code for the Infineon TLE493D-W2B6 (A0) 3D Magnetic Sensor on an ESP8266.
+ *
+ */
+
 #include <Wire.h>
-#include <math.h>
+#include "TLx493D_inc.hpp" // From the Infineon TLx493D library
 
-#define SDA_PIN 4        // D2 on NodeMCU/ESP8266
-#define SCL_PIN 5        // D1
-#define TLE_ADDR 0x35    // your scan shows 0x35
+using namespace ifx::tlx493d;
 
-// 8-bit scale from datasheet: 2.08 mT per LSB
-static const float MT_PER_LSB_8 = 2.08f;
+// ESP8266 pins (e.g., for a Wemos D1 Mini or NodeMCU)
+const uint8_t SDA_PIN = 4; // D2 This was only for 
+const uint8_t SCL_PIN = 5; // D1
 
-bool readBlock(uint8_t reg, uint8_t *buf, uint8_t n) {
-  Wire.beginTransmission(TLE_ADDR);
-  Wire.write(reg);                          // datasheet: first register address is 0
-  if (Wire.endTransmission(false) != 0) return false;  // repeated start
-  uint8_t got = Wire.requestFrom(TLE_ADDR, n);
-  if (got != n) return false;
-  for (uint8_t i = 0; i < n; i++) buf[i] = Wire.read();
-  return true;
-}
+TLx493D_W2B6 *mag = nullptr;
 
 void setup() {
   Serial.begin(115200);
-  delay(200);
-  Serial.println("\nTLE493D raw dump + 8-bit XYZ (no library)");
-  Wire.begin(SDA_PIN, SCL_PIN);
-  Wire.setClock(100000);                   // start conservative
-  Wire.setClockStretchLimit(150000L);
+  // Add a small delay to allow the serial monitor to connect.
+  delay(500);
+  Serial.println("\n--- TLE493D-W2B6 Sensor Initializing ---");
 
-  // Small settle time after power
-  delay(5);
+  // Initialize the I2C bus with custom ESP8266 pins
+  Wire.begin(SDA_PIN, SCL_PIN);
+  Wire.setClock(400000); // Set I2C to 400 kHz (Fast Mode)
+
+  // --- FIX 1 (Continued): Instantiate the sensor object NOW ---
+  // Now that Wire is initialized, we can safely create the sensor object.
+  mag = new TLx493D_W2B6(Wire, TLx493D_IIC_ADDR_A0_e);
+
+  // --- FIX 2: Initialize sensor with interrupts disabled for stability ---
+  // The 'true' argument disables interrupts during initialization, which is
+  // recommended for this sensor generation to prevent I2C bus stalls.
+  if (!mag->begin(true)) {
+    Serial.println("Error: Sensor initialization failed!");
+    Serial.println("Please check your wiring and the I2C address.");
+    // Halt execution if the sensor can't be found.
+    while (1) {
+      delay(1000);
+    }
+  }
+
+  // Set the magnetic field measurement range to the full ±160 mT range.
+  mag->setSensitivity(TLx493D_FULL_RANGE_e);
+
+  Serial.println("Sensor TLE493D-W2B6 (A1) is ready.");
+  Serial.println("------------------------------------");
 }
 
 void loop() {
-  uint8_t r[8];
+  double bx, by, bz;
 
-  // Read twice; discard first to let sensor shadow/refresh settle
-  readBlock(0x00, r, 8);
-  delayMicroseconds(200);
-  if (readBlock(0x00, r, 8)) {
-    // Raw bytes: [Xmsb Ymsb Zmsb Tmsb Xlsb Ylsb Zlsb Tlsb]
-    Serial.printf("raw: %02X %02X %02X %02X  %02X %02X %02X %02X  ",
-                  r[0], r[1], r[2], r[3], r[4], r[5], r[6], r[7]);
-
-    // 8-bit MSBs only (simple, robust)
-    int8_t x8 = (int8_t)r[0];
-    int8_t y8 = (int8_t)r[1];
-    int8_t z8 = (int8_t)r[2];
-
-    float Bx = x8 * MT_PER_LSB_8;
-    float By = y8 * MT_PER_LSB_8;
-    float Bz = z8 * MT_PER_LSB_8;
-    float Bmag = sqrtf(Bx*Bx + By*By + Bz*Bz);
-
-    Serial.printf("MSB8: Bx=%6.2f mT  By=%6.2f mT  Bz=%6.2f mT  |B|=%6.2f mT\n",
-                  Bx, By, Bz, Bmag);
+  // The getMagneticField function triggers a measurement and reads the result.
+  // We use the pointer access operator '->' instead of '.'
+  if (mag->getMagneticField(&bx, &by, &bz)) {
+    Serial.print("Bx: ");
+    Serial.print(bx, 3); // Print with 3 decimal places
+    Serial.print(" mT  |  ");
+    Serial.print("By: ");
+    Serial.print(by, 3);
+    Serial.print(" mT  |  ");
+    Serial.print("Bz: ");
+    Serial.print(bz, 3);
+    Serial.println(" mT");
   } else {
-    Serial.println("read fail");
+    // This error indicates a problem during an ongoing read operation.
+    Serial.println("Error: Failed to read from sensor during loop.");
   }
 
-  delay(100);
+  // Wait before the next reading
+  delay(200);
 }
-
-
-
-
