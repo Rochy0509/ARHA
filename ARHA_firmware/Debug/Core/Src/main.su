@@ -1,0 +1,8 @@
+../Core/Src/main.c:77:5:main	360	static
+../Core/Src/main.c:153:6:SystemClock_Config	72	static
+../Core/Src/main.c:193:13:MX_CAN_Init	8	static
+../Core/Src/main.c:230:13:MX_USART2_UART_Init	8	static
+../Core/Src/main.c:263:13:MX_GPIO_Init	16	static
+../Core/Src/main.c:279:6:HAL_CAN_RxFifo0MsgPendingCallback	480	static
+../Core/Src/main.c:348:13:CAN_ConfigFilter_AllToFIFO0	48	static
+../Core/Src/main.c:374:6:Error_Handler	4	static,ignoring_inline_asm
