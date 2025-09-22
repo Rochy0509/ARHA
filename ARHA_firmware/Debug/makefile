@@ -60,8 +60,8 @@ all: main-build
 main-build: ARHA_firmware.elf secondary-outputs
 
 # Tool invocations
-ARHA_firmware.elf ARHA_firmware.map: $(OBJS) $(USER_OBJS) /home/kenneth_m/Documents/kenneth_files/stm32/ARHA_firmware/STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "ARHA_firmware.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/kenneth_m/Documents/kenneth_files/stm32/ARHA_firmware/STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ARHA_firmware.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+ARHA_firmware.elf ARHA_firmware.map: $(OBJS) $(USER_OBJS) /home/kenneth_m/Documents/kenneth_files/stm32/ARHA/ARHA_firmware/STM32F103C8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "ARHA_firmware.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"/home/kenneth_m/Documents/kenneth_files/stm32/ARHA/ARHA_firmware/STM32F103C8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="ARHA_firmware.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -30,7 +30,7 @@
 #define SYS_RESET                             0x76
 #define READ_SYS_RUNTIME                      0xB1
 #define SET_COMM_BAUD_RATE                    0xB4
-#define FUNCTION_CONTROL                      0x20
+
 
 /**
  * @brief Maps readable names to the index values for PID parameters.
@@ -257,6 +257,12 @@ void MYACTUATOR_INC_POS_CL_CONTROL(uint8_t motor_id, uint16_t speed_limit, int32
 void MYACTUATOR_READ_SYS_OP_MODE(uint8_t motor_id);
 
 /**
+ * @brief Sends a command to reset the motor.
+ * @param motor_id The ID of the target motor (1-5).
+ */
+void MYACTUATOR_RESET_MOTOR(uint8_t motor_id);
+
+/**
  * @brief Sends a command to read the system's total runtime since the last reset.
  * @param motor_id The ID of the target motor (1-5).
  */
@@ -269,13 +275,5 @@ void MYACTUATOR_READ_SYS_RUNTIME(uint8_t motor_id);
  * @note This value is saved to ROM and takes effect on the next power cycle.
  */
 void MYACTUATOR_SET_BAUD_RATE(uint8_t motor_id, BAUD_RATE_INDEX baud);
-
-/**
- * @brief Executes a special system function based on the control index.
- * @param motor_id The ID of the target motor (1-32).
- * @param control The function to execute from the FUNCTION_CONTROL_INDEX enum.
- * @param value The value associated with the chosen function.
- */
-void MYACTUATOR_FUNCTION_CONTROL(uint8_t motor_id, FUNCTION_CONTROL_INDEX control, uint32_t value);
 
 #endif /* MYACTUATOR_H_ */
