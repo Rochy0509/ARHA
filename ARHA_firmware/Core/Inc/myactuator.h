@@ -128,7 +128,7 @@ void MYACTUATOR_READ_ACCEL(uint8_t motor_id, ACCEL_INDEX accel_index);
  * @param value The value to write
  */
 
-void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, int32_t value);
+void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, int32_t accel_value);
 
 /**
  * @brief Sends a command to read the multi-turn encoder position data.
@@ -216,14 +216,14 @@ void MYACTUATOR_MOTOR_STOP(uint8_t motor_id);
  * @param motor_id The ID of the target motor (1-5).
  * @param torque_value The target torque current. Unit: Amperes (A).
  */
-void MYACTUATOR_TORQUE_CL_CONTROL(uint8_t motor_id, float torque_value);
+void MYACTUATOR_TORQUE_CL_CONTROL(uint8_t motor_id, int16_t torque_value);
 
 /**
  * @brief Controls the motor using speed closed-loop control.
  * @param motor_id The ID of the target motor (1-5).
  * @param speed_value The target speed of the motor output shaft. Unit: degrees per second (dps).
  */
-void MYACTUATOR_SPEED_CL_CONTROL(uint8_t motor_id, float speed_value);
+void MYACTUATOR_SPEED_CL_CONTROL(uint8_t motor_id, int32_t speed_value);
 
 /**
  * @brief Controls the motor's absolute multi-turn position.
@@ -231,7 +231,7 @@ void MYACTUATOR_SPEED_CL_CONTROL(uint8_t motor_id, float speed_value);
  * @param speed_limit The maximum speed for the move. Unit: dps.
  * @param pos The target absolute angle. Unit: degrees.
  */
-void MYACTUATOR_ABS_POS_CL_CONTROL(uint8_t motor_id, float speed_limit, float pos);
+void MYACTUATOR_ABS_POS_CL_CONTROL(uint8_t motor_id, int16_t speed_limit, int32_t pos);
 
 /**
  * @brief Controls the motor's single-turn position (0-359.99 degrees).
@@ -240,7 +240,7 @@ void MYACTUATOR_ABS_POS_CL_CONTROL(uint8_t motor_id, float speed_limit, float po
  * @param speed_limit The maximum speed for the move. Unit: dps.
  * @param position The target angle within a single turn. Unit: degrees (0-359.99).
  */
-void MYACTUATOR_SINGLE_POS_CONTROL(uint8_t motor_id, SpinDirection direction, uint16_t speed_limit, float position);
+void MYACTUATOR_SINGLE_POS_CONTROL(uint8_t motor_id, SpinDirection direction, uint16_t speed_limit, uint16_t position);
 
 /**
  * @brief Controls the motor's position relative to its current position (incremental move).
@@ -248,7 +248,7 @@ void MYACTUATOR_SINGLE_POS_CONTROL(uint8_t motor_id, SpinDirection direction, ui
  * @param speed_limit The maximum speed for the move. Unit: dps.
  * @param pos The incremental angle to move. Unit: degrees.
  */
-void MYACTUATOR_INC_POS_CL_CONTROL(uint8_t motor_id, float speed_limit, float pos);
+void MYACTUATOR_INC_POS_CL_CONTROL(uint8_t motor_id, uint16_t speed_limit, int32_t pos);
 
 /**
  * @brief Sends a command to get the system's current operating mode (current, speed, or position loop).
@@ -275,7 +275,6 @@ void MYACTUATOR_SET_BAUD_RATE(uint8_t motor_id, BAUD_RATE_INDEX baud);
  * @param motor_id The ID of the target motor (1-32).
  * @param control The function to execute from the FUNCTION_CONTROL_INDEX enum.
  * @param value The value associated with the chosen function.
- * @note BUG: The 'value' parameter should be uint32_t to handle all cases correctly.
  */
 void MYACTUATOR_FUNCTION_CONTROL(uint8_t motor_id, FUNCTION_CONTROL_INDEX control, uint32_t value);
 
