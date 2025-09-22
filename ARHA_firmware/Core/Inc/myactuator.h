@@ -128,7 +128,7 @@ void MYACTUATOR_READ_ACCEL(uint8_t motor_id, ACCEL_INDEX accel_index);
  * @param value The value to write
  */
 
-void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, int32_t accel_value);
+void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, uint32_t accel_value);
 
 /**
  * @brief Sends a command to read the multi-turn encoder position data.

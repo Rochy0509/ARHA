@@ -71,6 +71,112 @@ void MYACTUATOR_WRITE_PID_TO_ROM(uint8_t motor_id, PID_PARAM_INDEX pid_index, fl
 	sendCANPacket(motor_id, data);
 }
 
+void MYACTUATOR_READ_ACCEL(uint8_t motor_id, ACCEL_INDEX accel_index){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_ACCEL;
+	data[1] = accel_index;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, uint32_t accel_value){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = WRITE_ACCEL_TO_ROM_RAM;
+	data[1] = accel_index;
+	data[4] = (uint8_t)(accel_value & 0xFF);
+	data[5] = (uint8_t)((accel_value >> 8) & 0xFF);
+	data[6] = (uint8_t)((accel_value >> 16) & 0xFF);
+	data[7] = (uint8_t)((accel_value >> 24) & 0xFF);
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_MULTI_ENC_POS(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_MULTI_ENC_POS_DATA;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_MULTI_ENC_ORIGINAL_POS(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_MULTI_ORIG_POS;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_MULTI_ENC_ZERO_OFFSET(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_MULTI_ENC_ZERO_OFFSET;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_WRITE_ENC_MULTI_TO_ROM_AS_MOTOR_ZERO(uint8_t motor_id, int32_t enc_offset){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = WRITE_ENC_MULTI_VALUE_TO_ROM_AS_MZERO;
+
+	union{
+		int32_t i32;
+		uint32_t u32;
+	} converter;
+
+	converter.i32 = enc_offset;
+	data[4] = (uint8_t)(converter.u32 & 0xFF);
+	data[5] = (uint8_t)((converter.u32 >> 8) & 0xFF);
+	data[6] = (uint8_t)((converter.u32 >> 8) & 0xFF);
+	data[7] = (uint8_t)((converter.u32 >> 8) & 0xFF);
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = WRITE_CURRENT_MULTI_POS_ENC_ROM_MZERO;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_SINGLE_ENC(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_SINGLE_ENC;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_MULTI_ENC_ANGLE(uint8_t motor_id){
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_MULTI_ENC_ANGLE;
+
+	sendCANPacket(motor_id, data);
+}
+
+void MYACTUATOR_READ_SINGLE_ENC_ANGLE(uint8_t motor_id){{
+	uint8_t data[8];
+	memset(data, 0, 8);
+
+	data[0] = READ_SINGLE_T_ANGLE;
+
+	sendCANPacket(motor_id, data);
+}
 
 void MYACTUATOR_READ_MOTOR_STATUS_1(uint8_t motor_id){
 	uint8_t data[8];
