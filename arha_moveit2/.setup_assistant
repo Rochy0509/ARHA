@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: arha_description
+    relative_path: urdf/ARHA.urdf
+  srdf:
+    relative_path: config/arha_description.srdf
+  package_settings:
+    author_name: Kenneth Martinez
+    author_email: kennethaldahir.martinezmoreno@ontariotechu.net
+    generated_timestamp: 1762559817
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity

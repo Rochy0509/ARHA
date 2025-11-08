@@ -1,0 +1,15 @@
+# Default initial positions for arha_description's ros2_control fake system
+
+initial_positions:
+  ElbowLD_joint: 0
+  ElbowLU_joint: 0
+  ElbowRD_joint: 0
+  ElbowRU_joint: 0
+  ShoulderLD_joint: 0
+  ShoulderLU_joint: 0
+  ShoulderRD_joint: 0
+  ShoulderRU_joint: 0
+  WristLD_joint: 0
+  WristLU_joint: 0
+  WristRD_joint: 0
+  WristRU_joint: 0

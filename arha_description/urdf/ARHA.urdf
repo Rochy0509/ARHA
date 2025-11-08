@@ -1,0 +1,802 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="arha_description">
+  <link name="world_link"/>
+  <joint name="world_joint" type="fixed">
+    <parent link="world_link"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.00486222622577581 0.45717497743252 -0.0249847706754774"
+        rpy="0 0 0" />
+      <mass
+        value="0.646806335459542" />
+      <inertia
+        ixx="0.045250217381864"
+        ixy="-0.000391647507311458"
+        ixz="-1.16032760425876E-18"
+        iyy="0.000375276048602199"
+        iyz="-9.77511439648212E-18"
+        izz="0.0452536352378809" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.611764705882353 0.658823529411765 0.670588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="chest_link">
+    <inertial>
+      <origin
+        xyz="-0.103578651729946 -0.000788072396643393 -0.0161664731766626"
+        rpy="0 0 0" />
+      <mass
+        value="1.36841316789851" />
+      <inertia
+        ixx="0.00489050738637658"
+        ixy="-1.05236493836224E-06"
+        ixz="3.5996291040505E-07"
+        iyy="0.00618645338476801"
+        iyz="9.75907806329965E-05"
+        izz="0.00331113448739452" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/chest_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.611764705882353 0.658823529411765 0.670588235294118 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/chest_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="chest_joint"
+    type="fixed">
+    <origin
+      xyz="0.11179 0.024169 0.84302"
+      rpy="0 0.0087266 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="chest_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="ShoulderLU_link">
+    <inertial>
+      <origin
+        xyz="0.000633904495236731 0.058299543463125 0.000131520562804743"
+        rpy="0 0 0" />
+      <mass
+        value="0.437859352194871" />
+      <inertia
+        ixx="0.000761320903843758"
+        ixy="0.00010323291028103"
+        ixz="5.11545981553644E-05"
+        iyy="0.000480494506076569"
+        iyz="3.0858569436463E-05"
+        izz="0.000607510740265925" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderLU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderLU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ShoulderLU_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0.24056 -1.5708" />
+    <parent
+      link="chest_link" />
+    <child
+      link="ShoulderLU_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="100"
+      velocity="5.235988" />
+  </joint>
+  <link
+    name="ShoulderLD_link">
+    <inertial>
+      <origin
+        xyz="0.0130996516559233 4.03562806224889E-05 -0.0159486004121393"
+        rpy="0 0 0" />
+      <mass
+        value="0.121271829639387" />
+      <inertia
+        ixx="0.000264584076158386"
+        ixy="-1.73910116146315E-07"
+        ixz="2.35095880421902E-05"
+        iyy="0.000215361369893302"
+        iyz="2.22793553735259E-08"
+        izz="0.000144313566720507" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderLD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderLD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ShoulderLD_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.086954 0"
+      rpy="0.0052522 0 0.0015918" />
+    <parent
+      link="ShoulderLU_link" />
+    <child
+      link="ShoulderLD_link" />
+    <axis
+      xyz="0.95701 0 0.29004" />
+    <limit
+      lower="0"
+      upper="1.5708"
+      effort="60"
+      velocity="4.1888" />
+  </joint>
+  <link
+    name="ElbowLU_link">
+    <inertial>
+      <origin
+        xyz="0.0523700637070466 0.00121630077779727 -0.165628058836482"
+        rpy="0 0 0" />
+      <mass
+        value="0.435431174027291" />
+      <inertia
+        ixx="0.00116072679569384"
+        ixy="8.04355925173392E-06"
+        ixz="0.000205352161683031"
+        iyy="0.00150791942538621"
+        iyz="4.82172912105246E-07"
+        izz="0.000545520164122057" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowLU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowLU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ElbowLU_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0.00062146 0 -0.0020506" />
+    <parent
+      link="ShoulderLD_link" />
+    <child
+      link="ElbowLU_link" />
+    <axis
+      xyz="0.29004 -0.0015904 -0.95701" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="20"
+      velocity="19.897" />
+  </joint>
+  <link
+    name="ElbowLD_link">
+    <inertial>
+      <origin
+        xyz="0.0150145603137214 -0.0141079237505648 -0.053785235661527"
+        rpy="0 0 0" />
+      <mass
+        value="0.405367875717028" />
+      <inertia
+        ixx="0.00067624701220466"
+        ixy="5.55177260579747E-06"
+        ixz="6.42141098567194E-05"
+        iyy="0.000879406227076063"
+        iyz="4.50678130640547E-06"
+        izz="0.000469982856451293" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowLD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowLD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ElbowLD_joint"
+    type="revolute">
+    <origin
+      xyz="0.075262 -0.00045791 -0.2413"
+      rpy="0.0011286 0.042027 0.00029402" />
+    <parent
+      link="ElbowLU_link" />
+    <child
+      link="ElbowLD_link" />
+    <axis
+      xyz="0.026692 0.99962 0.0064283" />
+    <limit
+      lower="-1.5708"
+      upper="0"
+      effort="60"
+      velocity="4.1888" />
+  </joint>
+  <link
+    name="WristLU_link">
+    <inertial>
+      <origin
+        xyz="0.00639011818127691 0.000136393365235563 0.0551589170384083"
+        rpy="0 0 0" />
+      <mass
+        value="0.348222374397224" />
+      <inertia
+        ixx="0.000507501720144092"
+        ixy="1.11372011938532E-07"
+        ixz="-9.14391421597536E-05"
+        iyy="0.000436522295309841"
+        iyz="3.98574321726627E-07"
+        izz="0.00026692664813503" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristLU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristLU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="WristLU_joint"
+    type="revolute">
+    <origin
+      xyz="0.033161 -0.0056591 -0.11391"
+      rpy="2.8571 -0.0068914 1.5425" />
+    <parent
+      link="ElbowLD_link" />
+    <child
+      link="WristLU_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="20"
+      velocity="0" />
+  </joint>
+  <link
+    name="WristLD_link">
+    <inertial>
+      <origin
+        xyz="-0.000789165657556684 0.000668276784951023 0.0143918198387223"
+        rpy="0 0 0" />
+      <mass
+        value="0.144157848422193" />
+      <inertia
+        ixx="0.0002107185858156"
+        ixy="-6.96875325623027E-07"
+        ixz="-1.50110185661794E-05"
+        iyy="0.000173165669857294"
+        iyz="-2.62309617895709E-06"
+        izz="0.000116799342666003" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristLD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristLD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="WristLD_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0.075065"
+      rpy="0.036631 0 0" />
+    <parent
+      link="WristLU_link" />
+    <child
+      link="WristLD_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="8"
+      velocity="32.463124" />
+  </joint>
+  <link
+    name="ShoulderRU_link">
+    <inertial>
+      <origin
+        xyz="0.000633904463091112 0.0632876622043777 0.000131520545503583"
+        rpy="0 0 0" />
+      <mass
+        value="0.437859351944568" />
+      <inertia
+        ixx="0.000761320903037865"
+        ixy="0.00010323291048724"
+        ixz="5.11545980849188E-05"
+        iyy="0.000480494505765443"
+        iyz="3.08585694704881E-05"
+        izz="0.000607510739616738" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderRU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderRU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ShoulderRU_joint"
+    type="revolute">
+    <origin
+      xyz="-0.20263 0.0018367 0"
+      rpy="3.1416 -0.28499 -1.5708" />
+    <parent
+      link="chest_link" />
+    <child
+      link="ShoulderRU_link" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="100"
+      velocity="5.235988" />
+  </joint>
+  <link
+    name="ShoulderRD_link">
+    <inertial>
+      <origin
+        xyz="0.0130603185121422 4.03570967780209E-05 -0.0159605216469788"
+        rpy="0 0 0" />
+      <mass
+        value="0.121271833885802" />
+      <inertia
+        ixx="0.000264584071728155"
+        ixy="-1.73910560956384E-07"
+        ixz="2.35095904760613E-05"
+        iyy="0.0002153613724785"
+        iyz="2.22817405287246E-08"
+        izz="0.000144313566137142" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderRD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ShoulderRD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ShoulderRD_joint"
+    type="revolute">
+    <origin
+      xyz="0 0.091943 0"
+      rpy="3.1389 -0.58853 0.00081251" />
+    <parent
+      link="ShoulderRU_link" />
+    <child
+      link="ShoulderRD_link" />
+    <axis
+      xyz="0.95701 0 0.29004" />
+    <limit
+      lower="-1.5708"
+      upper="0"
+      effort="60"
+      velocity="4.1888" />
+  </joint>
+  <link
+    name="ElbowRU_link">
+    <inertial>
+      <origin
+        xyz="0.056819807604414 0.00130441079169116 -0.161248980507902"
+        rpy="0 0 0" />
+      <mass
+        value="0.43543149660162" />
+      <inertia
+        ixx="0.00116072652976023"
+        ixy="8.04351173911062E-06"
+        ixz="0.000205352258430429"
+        iyy="0.00150791924798473"
+        iyz="4.82193415065212E-07"
+        izz="0.000545520215244939" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowRU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowRU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ElbowRU_joint"
+    type="revolute">
+    <origin
+      xyz="0.01 0 0"
+      rpy="-0.00017185 0.58853 3.1301" />
+    <parent
+      link="ShoulderRD_link" />
+    <child
+      link="ElbowRU_link" />
+    <axis
+      xyz="0.29004 -0.0015904 -0.95701" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="20"
+      velocity="19.897" />
+  </joint>
+  <link
+    name="ElbowRD_link">
+    <inertial>
+      <origin
+        xyz="0.01501721253576 -0.0140086375733101 -0.0537845978405951"
+        rpy="0 0 0" />
+      <mass
+        value="0.405367838897484" />
+      <inertia
+        ixx="0.000676246989908249"
+        ixy="5.55176945002612E-06"
+        ixz="6.42141075201969E-05"
+        iyy="0.0008794061843227"
+        iyz="4.50678755869984E-06"
+        izz="0.000469982837398396" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowRD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/ElbowRD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="ElbowRD_joint"
+    type="revolute">
+    <origin
+      xyz="0.079705 -0.00060472 -0.23692"
+      rpy="-4.9565E-05 -0.0018566 -1.1893E-05" />
+    <parent
+      link="ElbowRU_link" />
+    <child
+      link="ElbowRD_link" />
+    <axis
+      xyz="0.026692 0.99962 0.0064283" />
+    <limit
+      lower="0"
+      upper="1.5708"
+      effort="60"
+      velocity="4.1888" />
+  </joint>
+  <link
+    name="WristRU_link">
+    <inertial>
+      <origin
+        xyz="0.00639012254804167 0.000136393641995469 0.0563198944392286"
+        rpy="0 0 0" />
+      <mass
+        value="0.348222354843636" />
+      <inertia
+        ixx="0.000507501702429949"
+        ixy="1.11373651928209E-07"
+        ixz="-9.14391354779642E-05"
+        iyy="0.000436522279637755"
+        iyz="3.98581053072694E-07"
+        izz="0.000266926646371092" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristRU_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristRU_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="WristRU_joint"
+    type="revolute">
+    <origin
+      xyz="0.032837 -0.0055583 -0.1128"
+      rpy="2.8571 -0.002299 1.5582" />
+    <parent
+      link="ElbowRD_link" />
+    <child
+      link="WristRU_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="20"
+      velocity="0" />
+  </joint>
+  <link
+    name="WristRD_link">
+    <inertial>
+      <origin
+        xyz="-0.0007891665998703 0.000668277029161484 0.0143918184359768"
+        rpy="0 0 0" />
+      <mass
+        value="0.144157843696757" />
+      <inertia
+        ixx="0.000210718602074961"
+        ixy="-6.96872467093026E-07"
+        ixz="-1.50110128749547E-05"
+        iyy="0.000173165649110249"
+        iyz="-2.62309383761537E-06"
+        izz="0.000116799346279209" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristRD_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://arha_description/meshes/WristRD_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="WristRD_joint"
+    type="revolute">
+    <origin
+      xyz="0 0 0.076226"
+      rpy="0.047691 0 0" />
+    <parent
+      link="WristRU_link" />
+    <child
+      link="WristRD_link" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-1.5708"
+      upper="1.5708"
+      effort="8"
+      velocity="32.463" />
+  </joint>
+</robot>
