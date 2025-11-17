@@ -3,7 +3,7 @@
     This is a format for representing semantic information about the robot structure.
     A URDF file must exist for this robot as well, where the joints and the links that are referenced are defined
 -->
-<robot name="arha_description">
+<robot name="arha_complete">
     <!--GROUPS: Representation of a set of joints and links. This can be useful for specifying DOF to plan for, defining arms, end effectors, etc-->
     <!--LINKS: When a link is specified, the parent joint of that link (if it exists) is automatically included-->
     <!--JOINTS: When a joint is specified, the child link of that joint (which will always exist) is automatically included-->
@@ -16,6 +16,8 @@
         <joint name="ElbowLD_joint"/>
         <joint name="WristLU_joint"/>
         <joint name="WristLD_joint"/>
+        <joint name="left_robotiq_hande_coupler_joint"/>
+        <joint name="left_robotiq_hande_base_joint"/>
     </group>
     <group name="right_arm">
         <joint name="ShoulderRU_joint"/>
@@ -24,7 +26,25 @@
         <joint name="ElbowRD_joint"/>
         <joint name="WristRU_joint"/>
         <joint name="WristRD_joint"/>
+        <joint name="right_robotiq_hande_coupler_joint"/>
+        <joint name="right_robotiq_hande_base_joint"/>
     </group>
+    <group_state name="left_gripper_open" group="left_gripper">
+        <joint name="left_robotiq_hande_left_finger_joint" value="0.025"/>
+        <joint name="left_robotiq_hande_right_finger_joint" value="0.025"/>
+    </group_state>
+    <group_state name="left_gripper_closed" group="left_gripper">
+        <joint name="left_robotiq_hande_left_finger_joint" value="0.0"/>
+        <joint name="left_robotiq_hande_right_finger_joint" value="0.0"/>
+    </group_state>
+    <group_state name="right_gripper_open" group="right_gripper">
+        <joint name="right_robotiq_hande_left_finger_joint" value="0.025"/>
+        <joint name="right_robotiq_hande_right_finger_joint" value="0.025"/>
+    </group_state>
+    <group_state name="right_gripper_closed" group="right_gripper">
+        <joint name="right_robotiq_hande_left_finger_joint" value="0.0"/>
+        <joint name="right_robotiq_hande_right_finger_joint" value="0.0"/>
+    </group_state>
     <!--GROUP STATES: Purpose: Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
     <group_state name="left_arm_home" group="left_arm">
         <joint name="ElbowLD_joint" value="0"/>
@@ -137,4 +157,39 @@
     <disable_collisions link1="WristRD_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="WristRU_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="base_link" link2="chest_link" reason="Adjacent"/>
+
+    <!--GRIPPER PLANNING GROUPS-->
+    <group name="left_gripper">
+        <joint name="left_robotiq_hande_left_finger_joint"/>
+        <joint name="left_robotiq_hande_right_finger_joint"/>
+    </group>
+    
+    <group name="right_gripper">
+        <joint name="right_robotiq_hande_left_finger_joint"/>
+        <joint name="right_robotiq_hande_right_finger_joint"/>
+    </group>
+    
+    <!--END EFFECTORS-->
+    <end_effector name="left_hand" parent_link="left_robotiq_hande_link" group="left_gripper" parent_group="left_arm"/>
+    <end_effector name="right_hand" parent_link="right_robotiq_hande_link" group="right_gripper" parent_group="right_arm"/>
+    
+    <!--DISABLE COLLISIONS FOR GRIPPER FINGERS-->
+    <!-- Left gripper - fingers to palm -->
+    <disable_collisions link1="left_robotiq_hande_left_finger" link2="left_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_right_finger" link2="left_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_left_finger" link2="left_robotiq_hande_right_finger" reason="Adjacent"/>
+    
+    <!-- Right gripper - fingers to palm -->
+    <disable_collisions link1="right_robotiq_hande_left_finger" link2="right_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_right_finger" link2="right_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_left_finger" link2="right_robotiq_hande_right_finger" reason="Adjacent"/>
+    
+    <!-- Also disable collisions between gripper and wrist -->
+    <disable_collisions link1="left_robotiq_hande_link" link2="WristLD_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_coupler" link2="WristLD_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="left_robotiq_hande_coupler" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="WristRD_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_coupler" link2="WristRD_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="right_robotiq_hande_coupler" reason="Adjacent"/>
+
 </robot>

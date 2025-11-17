@@ -1,0 +1,42 @@
+# ROS 2 Octomap sensor configuration
+# Format: List sensor names, then define each sensor's parameters
+
+sensors:
+  - chest_camera
+  - left_wrist_camera
+  - right_wrist_camera
+
+chest_camera:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  point_cloud_topic: /camera_chest/depth/points
+  max_range: 3.0
+  point_subsample: 1
+  padding_offset: 0.02
+  padding_scale: 1.0
+  max_update_rate: 2.0
+  filtered_cloud_topic: filtered_cloud_chest
+
+left_wrist_camera:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  point_cloud_topic: /camera_left_wrist/depth/points
+  max_range: 1.5
+  point_subsample: 1
+  padding_offset: 0.01
+  padding_scale: 1.0
+  max_update_rate: 2.0
+  filtered_cloud_topic: filtered_cloud_left
+
+right_wrist_camera:
+  sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
+  point_cloud_topic: /camera_right_wrist/depth/points
+  max_range: 1.5
+  point_subsample: 1
+  padding_offset: 0.01
+  padding_scale: 1.0
+  max_update_rate: 2.0
+  filtered_cloud_topic: filtered_cloud_right
+
+# Octomap parameters
+octomap_frame: base_link
+octomap_resolution: 0.02
+max_range: 3.0
