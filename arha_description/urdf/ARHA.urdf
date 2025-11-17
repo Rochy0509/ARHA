@@ -17,7 +17,7 @@
         xyz="0.00486222622577581 0.45717497743252 -0.0249847706754774"
         rpy="0 0 0" />
       <mass
-        value="0.646806335459542" />
+        value="50.0" />
       <inertia
         ixx="0.045250217381864"
         ixy="-0.000391647507311458"
@@ -68,7 +68,7 @@
     </inertial>
     <visual>
       <origin
-        xyz="0 0 0"
+        xyz="0.0 0 0"
         rpy="0 0 0" />
       <geometry>
         <mesh
@@ -391,7 +391,7 @@
       lower="-1.5708"
       upper="1.5708"
       effort="20"
-      velocity="0" />
+      velocity="19.897" />
   </joint>
   <link
     name="WristLD_link">
@@ -739,7 +739,7 @@
       lower="-1.5708"
       upper="1.5708"
       effort="20"
-      velocity="0" />
+      velocity="19.897" />
   </joint>
   <link
     name="WristRD_link">
