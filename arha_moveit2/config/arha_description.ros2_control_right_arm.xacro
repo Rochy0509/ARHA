@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="arha_description_ros2_control_right_arm" params="name initial_positions_file use_fake_hardware:=true">
+        <xacro:property name="initial_positions" value="${load_yaml(initial_positions_file)['initial_positions']}"/>
+
+        <ros2_control name="${name}" type="system">
+            <hardware>
+                <xacro:if value="${use_fake_hardware}">
+                    <!-- Simulation mode - use mock hardware -->
+                    <plugin>mock_components/GenericSystem</plugin>
+                </xacro:if>
+                <xacro:unless value="${use_fake_hardware}">
+                    <!-- Real hardware mode - MyActuator RMD motors via CAN -->
+                    <plugin>grasp01_hardware/Grasp01HardwareInterface</plugin>
+                    <param name="ifname">can0</param>
+                    <param name="cycle_time">10</param>   <!-- ms -->
+                    <param name="timeout">1000</param>    <!-- ms -->
+                </xacro:unless>
+            </hardware>
+
+            <!-- RIGHT ARM JOINTS ONLY -->
+            <joint name="ShoulderRU_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['ShoulderRU_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">1</param>
+                <param name="torque_constant">0.33</param>
+                <param name="direction">-1</param>
+            </joint>
+            <joint name="ShoulderRD_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['ShoulderRD_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">2</param>
+                <param name="torque_constant">0.33</param>
+                <param name="direction">-1</param>
+            </joint>
+            <joint name="ElbowRU_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['ElbowRU_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">3</param>
+                <param name="torque_constant">0.33</param>
+                <param name="direction">-1</param>
+            </joint>
+            <joint name="ElbowRD_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['ElbowRD_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">4</param>
+                <param name="torque_constant">0.33</param>
+                <param name="direction">-1</param>
+            </joint>
+            <joint name="WristRU_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['WristRU_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">5</param>
+                <param name="torque_constant">0.33</param>
+                <param name="direction">-1</param>
+            </joint>
+            <joint name="WristRD_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">${initial_positions['WristRD_joint']}</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <param name="actuator_id">6</param>
+                <param name="torque_constant">0.33</param>
+            </joint>
+
+        </ros2_control>
+    </xacro:macro>
+</robot>

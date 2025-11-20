@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="arha_description">
+    <xacro:arg name="initial_positions_file" default="initial_positions.yaml" />
+    <xacro:arg name="use_fake_hardware" default="true" />
+
+    <!-- Import arha_description urdf file (dual arm) -->
+    <xacro:include filename="$(find arha_description)/urdf/ARHA.urdf" />
+
+    <!-- Import right arm control_xacro -->
+    <xacro:include filename="arha_description.ros2_control_right_arm.xacro" />
+
+    <!-- Configure ros2_control for right arm only -->
+    <xacro:arha_description_ros2_control_right_arm
+        name="RightArmSystem"
+        initial_positions_file="$(arg initial_positions_file)"
+        use_fake_hardware="$(arg use_fake_hardware)"/>
+
+</robot>

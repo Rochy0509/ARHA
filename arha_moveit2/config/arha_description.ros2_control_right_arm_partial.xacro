@@ -1,0 +1,99 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <!--
+    Partial hardware interface for right arm
+    This allows you to control only the motors that are available/working
+    Set enabled_joints parameter to specify which joints have working motors
+    -->
+    <xacro:macro name="arha_description_ros2_control_right_arm_partial" params="
+        name
+        initial_positions_file
+        use_fake_hardware:=true
+        enable_shoulder_ru:=true
+        enable_shoulder_rd:=true
+        enable_elbow_ru:=true
+        enable_elbow_rd:=true
+        enable_wrist_ru:=true
+        enable_wrist_rd:=true">
+
+        <xacro:property name="initial_positions" value="${load_yaml(initial_positions_file)['initial_positions']}"/>
+
+        <ros2_control name="${name}" type="system">
+            <hardware>
+                <xacro:if value="${use_fake_hardware}">
+                    <!-- Simulation mode - use mock hardware -->
+                    <plugin>mock_components/GenericSystem</plugin>
+                </xacro:if>
+                <xacro:unless value="${use_fake_hardware}">
+                    <!-- Real hardware mode - replace with your actual hardware interface plugin -->
+                    <!-- Example: <plugin>your_hardware_package/YourHardwareInterface</plugin> -->
+                    <plugin>mock_components/GenericSystem</plugin>
+                    <param name="mock_sensor_commands">false</param>
+                </xacro:unless>
+            </hardware>
+
+            <!-- RIGHT ARM JOINTS - Only enabled ones will be controlled -->
+
+            <xacro:if value="${enable_shoulder_ru}">
+                <joint name="ShoulderRU_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['ShoulderRU_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+            <xacro:if value="${enable_shoulder_rd}">
+                <joint name="ShoulderRD_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['ShoulderRD_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+            <xacro:if value="${enable_elbow_ru}">
+                <joint name="ElbowRU_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['ElbowRU_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+            <xacro:if value="${enable_elbow_rd}">
+                <joint name="ElbowRD_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['ElbowRD_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+            <xacro:if value="${enable_wrist_ru}">
+                <joint name="WristRU_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['WristRU_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+            <xacro:if value="${enable_wrist_rd}">
+                <joint name="WristRD_joint">
+                    <command_interface name="position"/>
+                    <state_interface name="position">
+                      <param name="initial_value">${initial_positions['WristRD_joint']}</param>
+                    </state_interface>
+                    <state_interface name="velocity"/>
+                </joint>
+            </xacro:if>
+
+        </ros2_control>
+    </xacro:macro>
+</robot>
