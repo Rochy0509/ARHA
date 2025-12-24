@@ -8,7 +8,7 @@ sensors:
 
 chest_camera:
   sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
-  point_cloud_topic: /camera_chest/depth/points
+  point_cloud_topic: /camera_chest/camera_chest/points
   max_range: 3.0
   point_subsample: 1
   padding_offset: 0.02
@@ -18,7 +18,7 @@ chest_camera:
 
 left_wrist_camera:
   sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
-  point_cloud_topic: /camera_left_wrist/depth/points
+  point_cloud_topic: /camera_left_wrist/camera_left_wrist/points
   max_range: 1.5
   point_subsample: 1
   padding_offset: 0.01
@@ -28,7 +28,7 @@ left_wrist_camera:
 
 right_wrist_camera:
   sensor_plugin: occupancy_map_monitor/PointCloudOctomapUpdater
-  point_cloud_topic: /camera_right_wrist/depth/points
+  point_cloud_topic: /camera_right_wrist/camera_right_wrist/points
   max_range: 1.5
   point_subsample: 1
   padding_offset: 0.01

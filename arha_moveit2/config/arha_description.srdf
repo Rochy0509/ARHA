@@ -137,5 +137,44 @@
     <disable_collisions link1="WristRD_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="WristRU_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="base_link" link2="chest_link" reason="Adjacent"/>
+    
+    <!-- Gripper self-collisions (fingers are allowed to touch when grasping) -->
+    <disable_collisions link1="left_robotiq_hande_left_finger" link2="left_robotiq_hande_right_finger" reason="Default"/>
+    <disable_collisions link1="right_robotiq_hande_left_finger" link2="right_robotiq_hande_right_finger" reason="Default"/>
+    
+    <!-- Left gripper with wrist -->
+    <disable_collisions link1="WristLD_link" link2="left_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="WristLD_link" link2="left_robotiq_hande_coupler" reason="Adjacent"/>
+    <disable_collisions link1="WristLD_link" link2="left_robotiq_hande_left_finger" reason="Never"/>
+    <disable_collisions link1="WristLD_link" link2="left_robotiq_hande_right_finger" reason="Never"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="left_robotiq_hande_coupler" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="left_robotiq_hande_left_finger" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="left_robotiq_hande_right_finger" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_coupler" link2="left_robotiq_hande_left_finger" reason="Never"/>
+    <disable_collisions link1="left_robotiq_hande_coupler" link2="left_robotiq_hande_right_finger" reason="Never"/>
+    
+    <!-- Right gripper with wrist -->
+    <disable_collisions link1="WristRD_link" link2="right_robotiq_hande_link" reason="Adjacent"/>
+    <disable_collisions link1="WristRD_link" link2="right_robotiq_hande_coupler" reason="Adjacent"/>
+    <disable_collisions link1="WristRD_link" link2="right_robotiq_hande_left_finger" reason="Never"/>
+    <disable_collisions link1="WristRD_link" link2="right_robotiq_hande_right_finger" reason="Never"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="right_robotiq_hande_coupler" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="right_robotiq_hande_left_finger" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="right_robotiq_hande_right_finger" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_coupler" link2="right_robotiq_hande_left_finger" reason="Never"/>
+    <disable_collisions link1="right_robotiq_hande_coupler" link2="right_robotiq_hande_right_finger" reason="Never"/>
+    
+    <!-- Cameras with their parent links -->
+    <disable_collisions link1="chest_link" link2="camera_chest_link" reason="Adjacent"/>
+    <disable_collisions link1="chest_link" link2="camera_chest_color_frame" reason="Never"/>
+    <disable_collisions link1="chest_link" link2="camera_chest_depth_frame" reason="Never"/>
+    <disable_collisions link1="WristLD_link" link2="camera_left_wrist_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="camera_left_wrist_link" reason="Adjacent"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="camera_left_wrist_color_frame" reason="Never"/>
+    <disable_collisions link1="left_robotiq_hande_link" link2="camera_left_wrist_depth_frame" reason="Never"/>
+    <disable_collisions link1="WristRD_link" link2="camera_right_wrist_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="camera_right_wrist_link" reason="Adjacent"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="camera_right_wrist_color_frame" reason="Never"/>
+    <disable_collisions link1="right_robotiq_hande_link" link2="camera_right_wrist_depth_frame" reason="Never"/>
 
 </robot>
