@@ -21,13 +21,16 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <cmath>
+#include <fstream>
+#include <exception>
 
 namespace arha_hardware_interface {
 
-class ArhaHardwareInteface : public hardware_interface::SystemInterface{
+class ArhaHardwareInterface : public hardware_interface::SystemInterface{
     public:
-        ArhaHardwareInteface() = default;
-        ~ArhaHardwareInteface() override;
+        ArhaHardwareInterface() = default;
+        ~ArhaHardwareInterface() override;
 
         //standard lifecycle methods ros2_control
         CallbackReturn on_init(const hardware_interface::HardwareInfo& info) override;
@@ -59,7 +62,6 @@ class ArhaHardwareInteface : public hardware_interface::SystemInterface{
 
     protected:
         static rclcpp::Logger getLogger();
-
 
         // Multi-limb support
         std::vector<std::string> limb_names_; // limb names expected by arha_tcp_driver after parsing urdf
