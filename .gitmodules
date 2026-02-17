@@ -1,0 +1,3 @@
+[submodule "realtime_tools"]
+	path = realtime_tools
+	url = https://github.com/ros-controls/realtime_tools.git
