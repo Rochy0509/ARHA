@@ -1,19 +1,50 @@
 {
   "configurations": [
     {
-      "browse": {
-        "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db",
-        "limitSymbolsToIncludedHeaders": false
-      },
+      "name": "STM32",
       "includePath": [
-        "/opt/ros/humble/include/**",
-        "/usr/include/**"
+        "${workspaceFolder}/Core/Inc",
+        "${workspaceFolder}/Core/Src",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc",
+        "${workspaceFolder}/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+        "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+        "${workspaceFolder}/Drivers/CMSIS/Include",
+        "${workspaceFolder}/Drivers/BSP/Components/**",
+        "${workspaceFolder}/LWIP/App",
+        "${workspaceFolder}/LWIP/Target",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/include",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F",
+        "${workspaceFolder}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1",
+        "${workspaceFolder}/Middlewares/Third_Party/LwIP/src/include",
+        "${workspaceFolder}/Middlewares/Third_Party/LwIP/system",
+        "${workspaceFolder}/Middlewares/Third_Party/LwIP/system/arch"
       ],
-      "name": "ros2",
-      "intelliSenseMode": "gcc-x64",
-      "compilerPath": "/usr/bin/gcc",
-      "cStandard": "gnu11",
-      "cppStandard": "c++17"
+      "defines": [
+        "USE_HAL_DRIVER",
+        "STM32H723xx",
+        "DEBUG"
+      ],
+      "compilerPath": "/opt/st/stm32cubeide_1.18.1/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.linux64_1.0.0.202410170706/tools/bin/arm-none-eabi-gcc",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "gcc-arm",
+      "compilerArgs": [
+        "-mcpu=cortex-m7",
+        "-mthumb",
+        "-mfpu=fpv5-d16",
+        "-mfloat-abi=hard"
+      ],
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "${workspaceFolder}/Core",
+          "${workspaceFolder}/Drivers",
+          "${workspaceFolder}/LWIP",
+          "${workspaceFolder}/Middlewares"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      }
     }
   ],
   "version": 4

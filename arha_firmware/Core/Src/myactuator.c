@@ -21,6 +21,10 @@ void sendCANPacket(uint8_t motor_id, uint8_t* data){
 	while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0 && timeout > 0) {
 		timeout--;
 	}
+
+	if (timeout > 0) {
+		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, data);
+	}
 }
 
 void MYACTUATOR_READ_PID(uint8_t motor_id,  PID_PARAM_INDEX pid_index){

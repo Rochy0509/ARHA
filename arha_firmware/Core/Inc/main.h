@@ -68,6 +68,14 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+/* Nucleo-H723ZG User LEDs */
+#define LED_GREEN_Pin    GPIO_PIN_0
+#define LED_GREEN_Port   GPIOB
+#define LED_YELLOW_Pin   GPIO_PIN_1
+#define LED_YELLOW_Port  GPIOE
+#define LED_RED_Pin      GPIO_PIN_14
+#define LED_RED_Port     GPIOB
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
