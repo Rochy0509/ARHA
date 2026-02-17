@@ -7,7 +7,13 @@
 #include <mutex>
 #include <atomic> 
 #include <cstdint>
+#include <cstring>
 #include <unordered_map>
+
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 
 namespace arha_tcp_driver {
@@ -31,8 +37,8 @@ namespace arha_tcp_driver {
     };
 
     struct DriverConfig {
-        std::string ip_address = "192.168.197.100";
-        int port = 8080;
+        std::string ip_address = "192.168.197.123";
+        int port = 5000;
         int socket_timeout_ms = 1000;
         int connection_retry_delay_ms = 100;
         int max_connection_retries = 3;
@@ -74,6 +80,8 @@ namespace arha_tcp_driver {
                                 std::vector<double>& efforts);
 
             // Single-joint within a limb
+            // Limb name is sent in the packet so the STM32 can route
+            // to the correct CAN channel (motor IDs repeat across limbs).
             DriverError setPosition(const std::string& limb_name,
                                     size_t joint_index, double position);
             DriverError setVelocity(const std::string& limb_name,
@@ -132,14 +140,20 @@ namespace arha_tcp_driver {
             // Low-level communication
             DriverError sendPacket(CommandType cmd, const std::vector<uint8_t>& data);
             DriverError receivePacket(std::vector<uint8_t>& data);
+            // Send a command and consume the STM32's ACK response.
+            // Use for all commands that don't return data (set, enable, e-stop, etc.)
+            DriverError sendAndWaitAck(CommandType cmd, const std::vector<uint8_t>& data);
 
             // Packet encoding/decoding
             void encodeUInt8(std::vector<uint8_t>& buffer, uint8_t value);
             void encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value);
-            void encodeDouble(std::vector<uint8_t>& buffer, double value);
             void encodeString(std::vector<uint8_t>& buffer, const std::string& str);
             uint32_t decodeUInt32(const std::vector<uint8_t>& buffer, size_t offset);
-            double decodeDouble(const std::vector<uint8_t>& buffer, size_t offset);
+            int32_t decodeInt32(const std::vector<uint8_t>& buffer, size_t offset);
+            // Encode double radians → float32 radians (IEEE 754) for STM32 wire format
+            void encodeMotorValue(std::vector<uint8_t>& buffer, double radians);
+            // Decode float32 radians (IEEE 754) → double radians from STM32 wire format
+            double decodeMotorValue(const std::vector<uint8_t>& buffer, size_t offset);
             uint8_t calculateChecksum(const std::vector<uint8_t>& data);
 
             // Socket operations
