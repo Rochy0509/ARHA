@@ -411,3 +411,4 @@ VP_SYS_VS_tim6.Mode=TIM6
 VP_SYS_VS_tim6.Signal=SYS_VS_tim6
 board=NUCLEO-H723ZG
 boardIOC=true
+rtos.0.ip=FREERTOS

@@ -120,7 +120,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  /* NOTE: MX_LWIP_Init() is called inside StartDefaultTask (FreeRTOS mode) */
   MX_CORDIC_Init();
   MX_FDCAN1_Init();
   MX_FMAC_Init();
@@ -440,7 +439,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
@@ -479,7 +477,7 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
   tcp_server_init();
-
+  impendance_task_init();
   for(;;)
   {
     osDelay(1);
