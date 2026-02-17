@@ -23,7 +23,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "fdcan.h"
+#include "myactuator.h"
+#include "tcp_ip.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -118,11 +120,22 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  /* NOTE: MX_LWIP_Init() is called inside StartDefaultTask (FreeRTOS mode) */
   MX_CORDIC_Init();
   MX_FDCAN1_Init();
   MX_FMAC_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+
+   // Initialize FDCAN driver
+  if (FDCAN_Driver_init() != HAL_OK) {
+      Error_Handler();
+  }
+
+  // Start FDCAN peripheral
+  if (FDCAN_Driver_Start() != HAL_OK) {
+      Error_Handler();
+  }
 
   /* USER CODE END 2 */
 
@@ -427,9 +440,24 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* Configure LED pins: PB0 (Green/LD1), PB14 (Red/LD3) */
+  HAL_GPIO_WritePin(GPIOB, LED_GREEN_Pin | LED_RED_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = LED_GREEN_Pin | LED_RED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* Configure LED pin: PE1 (Yellow/LD2) */
+  HAL_GPIO_WritePin(GPIOE, LED_YELLOW_Pin, GPIO_PIN_RESET);
+  GPIO_InitStruct.Pin = LED_YELLOW_Pin;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
@@ -450,7 +478,8 @@ void StartDefaultTask(void *argument)
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
-  /* Infinite loop */
+  tcp_server_init();
+
   for(;;)
   {
     osDelay(1);

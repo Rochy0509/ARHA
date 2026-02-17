@@ -17,7 +17,7 @@ static volatile uint8_t rx_tail = 0; //Read position
 HAL_StatusTypeDef FDCAN_Driver_init(void){
 	FDCAN_FilterTypeDef filter_config;
 
-	//Filter setting to receive messages from addresses starting at 0x240 + ID
+    /* Filter range 0x241-0x246 for motor responses */
 	filter_config.IdType = FDCAN_STANDARD_ID;
 	filter_config.FilterIndex = 0;
 	filter_config.FilterType = FDCAN_FILTER_RANGE;
@@ -29,12 +29,10 @@ HAL_StatusTypeDef FDCAN_Driver_init(void){
 		return HAL_ERROR;
 	}
 
-	// Configure global filter to reject non-matching messages
-	if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
-									 FDCAN_REJECT,        // Reject non-matching standard IDs
-									 FDCAN_REJECT,        // Reject non-matching extended IDs
-									 FDCAN_FILTER_REMOTE, // Reject remote standard frames
-									 FDCAN_FILTER_REMOTE) != HAL_OK){
+    /* Reject non-matching standard/extended IDs and remote frames */
+    if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1,
+                                     FDCAN_REJECT, FDCAN_REJECT, 
+                                     FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK){
 		return HAL_ERROR;
 	}
 
@@ -43,7 +41,7 @@ HAL_StatusTypeDef FDCAN_Driver_init(void){
 		return HAL_ERROR;
 	}
 
-	// Enable interrupt for messages in FIFO0
+    /* Enable FIFO0 new message interrupt */
 	if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) != HAL_OK){
 		return HAL_ERROR;
 	}
@@ -66,13 +64,13 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 		FDCAN_RxHeaderTypeDef rx_header;
 		uint8_t rx_data[8];
 
-		//Retrieve message from hardware FIFO
+        /* Read message from hardware FIFO */
 		if (HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &rx_header, rx_data) == HAL_OK){
 
-			//Storing queue
+            /* Advance write index (circular buffer) */
 			uint8_t next_head = (rx_head + 1) % RX_QUEUE_SIZE;
 
-			//Check if queue is full
+            /* Store if queue not full */
 			if (next_head != rx_tail) {
 				rx_queue[rx_head].can_id = rx_header.Identifier;
 				rx_queue[rx_head].motor_id = rx_header.Identifier - 0x240;
@@ -88,7 +86,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 
 bool FDCAN_Driver_GetMessage(FDCAN_RxMessage_t *msg){
 
-	//Check if queue has data
+    /* Check if queue empty */
 	if (rx_head == rx_tail){
 		return false;
 	}
