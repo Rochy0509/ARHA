@@ -131,31 +131,48 @@ bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
     FDCAN_RxMessage_t msg;
     uint32_t start_tick = HAL_GetTick();
 
-    /* Use 0x92 command as per protocol doc (0.01 deg units) */
-    MYACTUATOR_READ_MULTI_ENC_ANGLE(motor_id);
+    /* Request motor status 2 (0x9C) — preferred: contains temp, torque, speed, angle */
+    MYACTUATOR_READ_MOTOR_STATUS_2(motor_id);
 
-    /* Poll for response with timeout */
+    /* Poll for response with timeout; accept either 0x9C or (fallback) 0x92 */
     while ((HAL_GetTick() - start_tick) < CAN_RESPONSE_TIMEOUT_MS) {
         if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0x92) {
-                
-                /* Parse 0x92: Bytes 4-7 is int32 angle (0.01 deg/LSB) */
-                int32_t angle_int = (int32_t)(msg.data[4] | (msg.data[5] << 8) | 
-                                            (msg.data[6] << 16) | (msg.data[7] << 24));
-                
-                if (pos) *pos = mya_pos_to_rad(angle_int);
-                
-                /* Velocity/Effort not available in 0x92 */
-                if (vel) *vel = 0.0;
-                if (eff) *eff = 0.0;
-                if (temp) *temp = 0.0;
+            if (msg.motor_id == motor_id) {
+                if (msg.command == 0x9C) {
+                    /* 0x9C layout (per protocol):
+                     * byte0: temp (int8, °C)
+                     * bytes1-2: torque current (int16, 0.01A/LSB)
+                     * bytes3-4: speed (int16, deg/s)
+                     * bytes5-6: angle (int16, deg)
+                     */
+                    int8_t temp_raw = (int8_t)msg.data[0];
+                    int16_t torque_raw = (int16_t)(msg.data[1] | (msg.data[2] << 8));
+                    int16_t speed_raw = (int16_t)(msg.data[3] | (msg.data[4] << 8));
+                    int16_t angle_raw = (int16_t)(msg.data[5] | (msg.data[6] << 8));
 
-                return true;
+                    if (temp) *temp = (double)temp_raw;                      /* °C */
+                    if (eff)  *eff  = (double)torque_raw * 0.01;             /* A */
+                    if (vel)  *vel  = (double)speed_raw * DEG_TO_RAD;       /* rad/s */
+                    if (pos)  *pos  = (double)angle_raw * DEG_TO_RAD;       /* rad */
+
+                    return true;
+                }
+
+                if (msg.command == 0x92) {
+                    /* Fallback for older firmware: 0x92 returns 32-bit multi-turn angle (0.01 deg/LSB) */
+                    int32_t angle_int = (int32_t)(msg.data[4] | (msg.data[5] << 8) |
+                                                 (msg.data[6] << 16) | (msg.data[7] << 24));
+                    if (pos) *pos = mya_pos_to_rad(angle_int);
+                    if (vel) *vel = 0.0;
+                    if (eff) *eff = 0.0;
+                    if (temp) *temp = 0.0;
+                    return true;
+                }
             }
         }
-        /* Yield to other tasks while waiting */
         osDelay(1);
     }
 
+    /* timed out without receiving an acceptable response */
     return false; /* Timeout */
 }
