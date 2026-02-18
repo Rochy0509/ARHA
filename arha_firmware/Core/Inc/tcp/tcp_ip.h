@@ -27,7 +27,7 @@
 #define TCP_RECV_TIMEOUT_MS 5000
 
 // ── Robot topology ──
-#include "motor_control.h"
+#include "motor/motor_control.h"
 
 // ── Robot topology ──
 // defined in motor_control.h
