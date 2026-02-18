@@ -174,15 +174,15 @@ bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
             if (msg.motor_id == motor_id) {
                 if (msg.command == 0x9C) {
                     /* 0x9C layout (per protocol):
-                     * byte0: temp (int8, °C)
-                     * bytes1-2: torque current (int16, 0.01A/LSB)
-                     * bytes3-4: speed (int16, deg/s)
-                     * bytes5-6: angle (int16, deg)
+                     * byte1: temp (int8, °C)
+                     * bytes2-3: torque current (int16, 0.01A/LSB)
+                     * bytes4-5: speed (int16, deg/s)
+                     * bytes6-7: angle (int16, deg)
                      */
-                    int8_t temp_raw = (int8_t)msg.data[0];
-                    int16_t torque_raw = (int16_t)(msg.data[1] | (msg.data[2] << 8));
-                    int16_t speed_raw = (int16_t)(msg.data[3] | (msg.data[4] << 8));
-                    int16_t angle_raw = (int16_t)(msg.data[5] | (msg.data[6] << 8));
+                    int8_t temp_raw = (int8_t)msg.data[1];
+                    int16_t torque_raw = (int16_t)(msg.data[2] | (msg.data[3] << 8));
+                    int16_t speed_raw = (int16_t)(msg.data[4] | (msg.data[5] << 8));
+                    int16_t angle_raw = (int16_t)(msg.data[6] | (msg.data[7] << 8));
 
                     if (temp) *temp = (double)temp_raw;                      /* °C */
                     if (eff)  *eff  = (double)torque_raw * 0.01;             /* A */
