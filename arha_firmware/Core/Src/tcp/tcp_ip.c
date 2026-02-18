@@ -10,8 +10,8 @@
  * Author: Kenneth Martinez
  */
 
-#include "tcp_ip.h"
-#include "motor_control.h"
+#include "tcp/tcp_ip.h"
+#include "motor/motor_control.h"
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/sys.h"

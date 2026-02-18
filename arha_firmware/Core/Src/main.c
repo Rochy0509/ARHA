@@ -23,9 +23,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "fdcan.h"
-#include "myactuator.h"
-#include "tcp_ip.h"
+#include "motor/fdcan.h"
+#include "motor/myactuator.h"
+#include "tcp/tcp_ip.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -477,7 +477,6 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
   tcp_server_init();
-  impendance_task_init();
   for(;;)
   {
     osDelay(1);

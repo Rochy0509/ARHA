@@ -5,7 +5,7 @@
  *      Author: Kenneth Martinez
  */
 
-#include "fdcan.h"
+#include "motor/fdcan.h"
 #include "string.h"
 
 #define RX_QUEUE_SIZE 16
