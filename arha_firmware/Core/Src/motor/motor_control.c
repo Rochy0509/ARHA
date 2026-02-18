@@ -135,6 +135,40 @@ void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad) {
     MYACTUATOR_ABS_POS_CL_CONTROL(motor_id, (int16_t)DEFAULT_SPEED_LIMIT_DPS, deg);
 }
 
+bool motor_set_position_and_wait(uint8_t limb, uint32_t motor_id, double position_rad, uint32_t timeout_ms, double tolerance_rad) {
+    /* Send the position command, then poll motor state until within tolerance. */
+    motor_set_position(limb, motor_id, position_rad);
+
+    uint32_t start = HAL_GetTick();
+    while ((HAL_GetTick() - start) < timeout_ms) {
+        double pos = 0, vel = 0, eff = 0, tmp = 0;
+        if (motor_get_state(limb, motor_id, &pos, &vel, &eff, &tmp)) {
+            if (fabs(pos - position_rad) <= tolerance_rad) {
+                return true; /* reached */
+            }
+        }
+        osDelay(20);
+    }
+
+    /* Attempt simple recovery: clear errors and retry once */
+    motor_clear_errors(limb, motor_id);
+    HAL_Delay(50);
+    motor_set_position(limb, motor_id, position_rad);
+
+    start = HAL_GetTick();
+    while ((HAL_GetTick() - start) < timeout_ms) {
+        double pos = 0, vel = 0, eff = 0, tmp = 0;
+        if (motor_get_state(limb, motor_id, &pos, &vel, &eff, &tmp)) {
+            if (fabs(pos - position_rad) <= tolerance_rad) {
+                return true;
+            }
+        }
+        osDelay(20);
+    }
+
+    return false; /* still not reached */
+}
+
 void motor_set_velocity(uint8_t limb, uint32_t motor_id, double velocity_rad_s) {
     /* Convert Rad/s to Degrees/s (dps) */
     int32_t dps = rads_to_mya_vel(velocity_rad_s);
@@ -152,31 +186,6 @@ void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort) {
 bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
                      double *pos, double *vel, double *eff, double *temp) {
 
-<<<<<<< HEAD
-    FDCAN_RxMessage_t msg;
-    uint32_t start_tick;
-    bool got_pos = false;
-
-    /* Default outputs */
-    if (pos)  *pos  = 0.0;
-    if (vel)  *vel  = 0.0;
-    if (eff)  *eff  = 0.0;
-    if (temp) *temp = 0.0;
-
-    /* ── Step 1: Read multi-turn angle via 0x92 (0.01 deg/LSB, int32) ── */
-    drain_can_queue();
-    MYACTUATOR_READ_MULTI_ENC_ANGLE(motor_id);
-
-    start_tick = HAL_GetTick();
-    while ((HAL_GetTick() - start_tick) < CAN_RESPONSE_TIMEOUT_MS) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0x92) {
-                int32_t angle_lsb = (int32_t)(msg.data[4] | (msg.data[5] << 8) |
-                                              (msg.data[6] << 16) | (msg.data[7] << 24));
-                if (pos) *pos = mya_pos_to_rad(angle_lsb);
-                got_pos = true;
-                break;
-=======
     /* Request motor status 2 (0x9C) — preferred: contains temp, torque, speed, angle */
     MYACTUATOR_READ_MOTOR_STATUS_2(motor_id);
 
@@ -214,78 +223,39 @@ bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
                     if (temp) *temp = 0.0;
                     return true;
                 }
->>>>>>> 639d615 (Fixed the use of 0x9c)
             }
         }
         osDelay(1);
     }
 
-<<<<<<< HEAD
-    /* ── Step 2: Read velocity, current, temp via 0x9C ── */
-    drain_can_queue();
-    MYACTUATOR_READ_MOTOR_STATUS_2(motor_id);
-
-    start_tick = HAL_GetTick();
-    while ((HAL_GetTick() - start_tick) < CAN_RESPONSE_TIMEOUT_MS) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0x9C) {
-                /* DATA[1] = temperature (int8_t, 1°C/LSB) */
-                if (temp) *temp = (double)(int8_t)msg.data[1];
-
-                /* DATA[2-3] = torque current iq (int16_t, 0.01A/LSB) */
-                int16_t iq = (int16_t)(msg.data[2] | (msg.data[3] << 8));
-                double current_A = (double)iq * 0.01;
-                if (eff) *eff = current_A * get_torque_constant(limb_index, motor_id);
-
-                /* DATA[4-5] = speed (int16_t, 1dps/LSB) */
-                int16_t speed_dps = (int16_t)(msg.data[4] | (msg.data[5] << 8));
-                if (vel) *vel = (double)speed_dps * DEG_TO_RAD;
-
-                break;
-            }
-        }
-        osDelay(1);
-    }
-
-    return got_pos;
-}
-
-/* Zero encoder for all specified motors in a limb.
- * Sequence: set zero (0x64) → reset (0x76) → wait reboot → verify */
-bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num_motors) {
-    #define ZERO_TOLERANCE_DEG 0.1
-    #define MOTOR_REBOOT_MS    5000
-
-    /* Set current position as encoder zero */
-    for (uint8_t i = 0; i < num_motors; i++) {
-        drain_can_queue();
-        MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(motor_ids[i]);
-        osDelay(100);
-    }
-
-    /* Reset motors */
-    for (uint8_t i = 0; i < num_motors; i++) {
-        MYACTUATOR_RESET_MOTOR(motor_ids[i]);
-        osDelay(10);
-    }
-
-    /* Wait for reboot */
-    osDelay(MOTOR_REBOOT_MS);
-
-    /* Verify positions near zero */
-    bool all_ok = true;
-    for (uint8_t i = 0; i < num_motors; i++) {
-        double pos = 0;
-        if (motor_get_state(limb, motor_ids[i], &pos, NULL, NULL, NULL)) {
-            if (fabs(pos * RAD_TO_DEG) > ZERO_TOLERANCE_DEG)
-                all_ok = false;
-        } else {
-            all_ok = false;
-        }
-    }
-    return all_ok;
-=======
     /* timed out without receiving an acceptable response */
     return false; /* Timeout */
->>>>>>> 639d615 (Fixed the use of 0x9c)
+}
+
+/* Read raw motor-status (0x9A). Copies up to 8 bytes into status_buf and
+ * writes the number of bytes into status_len (if non-NULL). Returns true
+ * if a 0x9A response was received within the timeout window. */
+bool motor_get_status_raw(uint8_t limb, uint32_t motor_id, uint8_t *status_buf, uint8_t *status_len) {
+    FDCAN_RxMessage_t msg;
+    uint32_t start_tick = HAL_GetTick();
+
+    MYACTUATOR_READ_MOTOR_STATUS_1(motor_id);
+
+    /* Allow a slightly larger window for diagnostic reads */
+    while ((HAL_GetTick() - start_tick) < (CAN_RESPONSE_TIMEOUT_MS * 5)) {
+        if (FDCAN_Driver_GetMessage(&msg)) {
+            if (msg.motor_id == motor_id && msg.command == READ_MOTOR_STATUS_1) {
+                if (status_buf) memcpy(status_buf, msg.data, 8);
+                if (status_len) *status_len = 8;
+                return true;
+            }
+        }
+        osDelay(1);
+    }
+
+    return false;
+}
+
+void motor_rezero_position(uint8_t limb, uint32_t motor_id) {
+    MYACTUATOR_WRITE_ENC_MULTI_TO_ROM_AS_MOTOR_ZERO(motor_id, 0);
 }

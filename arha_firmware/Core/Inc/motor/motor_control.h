@@ -33,6 +33,7 @@ void motor_control_init(void);
  * Units: position (radians), velocity (rad/s), effort (Amps - approx)
  */
 void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad);
+bool motor_set_position_and_wait(uint8_t limb, uint32_t motor_id, double position_rad, uint32_t timeout_ms, double tolerance_rad);
 void motor_set_velocity(uint8_t limb, uint32_t motor_id, double velocity_rad_s);
 void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort);
 
@@ -42,6 +43,9 @@ void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort);
  */
 bool motor_get_state(uint8_t limb, uint32_t motor_id,
                      double *pos, double *vel, double *eff, double *temp);
+
+/* Read raw motor-status (0x9A) into an 8-byte buffer. Returns true on success. */
+bool motor_get_status_raw(uint8_t limb, uint32_t motor_id, uint8_t *status_buf, uint8_t *status_len);
 
 /* Enable/Disable/Stop */
 void motor_stop(uint8_t limb, uint32_t motor_id);

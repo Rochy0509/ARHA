@@ -10,15 +10,8 @@
  * Author: Kenneth Martinez
  */
 
-<<<<<<< HEAD:arha_firmware/Core/Src/tcp_ip.c
-#include "tcp_ip.h"
-#include "motor_control.h"
-#include "myactuator.h"
-#include "fdcan.h"
-=======
 #include "tcp/tcp_ip.h"
 #include "motor/motor_control.h"
->>>>>>> 371a877 (Reorganized stuff):arha_firmware/Core/Src/tcp/tcp_ip.c
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/sys.h"

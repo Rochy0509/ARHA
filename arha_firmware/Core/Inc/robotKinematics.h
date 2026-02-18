@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 /* Link lengths for the 2-DOF planar arm (meters) */
-const float lengths[2] = {0.1f, 0.1f};
+extern const float lengths[2];
 
 
 

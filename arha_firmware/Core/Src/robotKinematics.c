@@ -2,6 +2,8 @@
 #include <math.h>
 #include <arm_math.h>
 
+/* Link lengths for the 2-DOF planar arm (meters) */
+const float lengths[2] = {0.1f, 0.1f};
 
 
 float *inverse_kinematics(float *pos)
