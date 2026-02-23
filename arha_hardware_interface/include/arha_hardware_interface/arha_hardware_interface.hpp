@@ -65,9 +65,10 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         static rclcpp::Logger getLogger();
 
         // Multi-limb support
-        std::vector<std::string> limb_names_; // limb names expected by arha_tcp_driver after parsing urdf
-        std::map<std::string, std::vector<std::string>> joint_names_; // joint names for moveit2 and ros2 operations
-        std::map<std::string, std::vector<uint32_t>> motor_ids_;      // motor_ids to be passed with limb_name to arha_tcp_driver
+        size_t num_joints_{0};
+        std::vector<std::string> limb_names_;
+        std::map<std::string, std::vector<std::string>> joint_names_;
+        std::map<std::string, std::vector<uint32_t>> motor_ids_;
 
         // Real-time safe buffers for state and command, per limb
         std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> position_state_buffer_;
@@ -87,7 +88,19 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::atomic<bool> stop_polling_{false};
 
         void pollingLoop();
-
+        
+        //flat double arrays for ros2_control to point to since RealTimeBuffer do not expose stable pointer for this
+        std::vector<double> hw_position_commands_;
+        std::vector<double> hw_velocity_commands_;
+        std::vector<double> hw_effort_commands_;     
+        std::vector<double> hw_position_states_;     
+        std::vector<double> hw_velocity_states_;  
+        std::vector<double> hw_effort_states_;
+        
+        //flags to check if interfaces are running
+        bool position_interface_running_{false};
+        bool velocity_interface_running_{false};
+        bool effort_interface_running_{false};
 };
 }
 
