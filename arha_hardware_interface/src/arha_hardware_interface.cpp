@@ -288,7 +288,98 @@ hardware_interface::return_type ArhaHardwareInterface::perform_command_mode_swit
             RCLCPP_INFO(getLogger(), "Effort mode enabled for all joints");
         }
     }
-    
+
     return hardware_interface::return_type::OK;
 }
+
+hardware_interface::return_type ArhaHardwareInterface::read(
+    const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
+
+    size_t index = 0;
+    for (const auto& limb : limb_names_) {
+        const auto* positions  = position_state_buffer_[limb].readFromRT();
+        const auto* velocities = velocity_state_buffer_[limb].readFromRT();
+        const auto* efforts    = effort_state_buffer_[limb].readFromRT();
+
+        for (size_t j = 0; j < positions->size(); ++j) {
+            hw_position_states_[index] = (*positions)[j];
+            hw_velocity_states_[index] = (*velocities)[j];
+            hw_effort_states_[index]   = (*efforts)[j];
+            index++;
+        }
+    }
+
+    return hardware_interface::return_type::OK;
+}
+
+hardware_interface::return_type ArhaHardwareInterface::write(
+    const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
+
+    size_t index = 0;
+    for (const auto& limb : limb_names_) {
+        size_t n = joint_names_[limb].size();
+
+        if (position_interface_running_) {
+            std::vector<double> cmds(n);
+            for (size_t j = 0; j < n; ++j) {
+                cmds[j] = hw_position_commands_[index + j];
+            }
+            position_command_buffer_[limb].writeFromNonRT(cmds);
+        } else if (velocity_interface_running_) {
+            std::vector<double> cmds(n);
+            for (size_t j = 0; j < n; ++j) {
+                cmds[j] = hw_velocity_commands_[index + j];
+            }
+            velocity_command_buffer_[limb].writeFromNonRT(cmds);
+        } else if (effort_interface_running_) {
+            std::vector<double> cmds(n);
+            for (size_t j = 0; j < n; ++j) {
+                cmds[j] = hw_effort_commands_[index + j];
+            }
+            effort_command_buffer_[limb].writeFromNonRT(cmds);
+        }
+
+        index += n;
+    }
+
+    return hardware_interface::return_type::OK;
+}
+
+void ArhaHardwareInterface::pollingLoop() {
+    constexpr auto cycle_time = std::chrono::milliseconds(10);
+
+    while (!stop_polling_) {
+        auto const now = std::chrono::steady_clock::now();
+        auto const wakeup_time = now + cycle_time;
+
+        for (const auto& limb : limb_names_) {
+            size_t n = joint_names_[limb].size();
+
+            if (position_interface_running_) {
+                const auto* cmds = position_command_buffer_[limb].readFromRT();
+                driver_->setPositions(limb, *cmds);
+            } else if (velocity_interface_running_) {
+                const auto* cmds = velocity_command_buffer_[limb].readFromRT();
+                driver_->setVelocities(limb, *cmds);
+            } else if (effort_interface_running_) {
+                const auto* cmds = effort_command_buffer_[limb].readFromRT();
+                driver_->setEfforts(limb, *cmds);
+            }
+
+            std::vector<double> positions(n);
+            std::vector<double> velocities(n);
+            std::vector<double> efforts(n);
+
+            auto err = driver_->getStates(limb, positions, velocities, efforts);
+            if (err == arha_tcp_driver::DriverError::SUCCESS) {
+                position_state_buffer_[limb].writeFromNonRT(positions);
+                velocity_state_buffer_[limb].writeFromNonRT(velocities);
+                effort_state_buffer_[limb].writeFromNonRT(efforts);
+            }
+        }
+
+        std::this_thread::sleep_until(wakeup_time);
+    }
+}
+
 }
