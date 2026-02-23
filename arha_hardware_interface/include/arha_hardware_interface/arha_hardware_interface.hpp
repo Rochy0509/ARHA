@@ -24,6 +24,7 @@
 #include <cmath>
 #include <fstream>
 #include <exception>
+#include <algorithm>
 
 namespace arha_hardware_interface {
 
