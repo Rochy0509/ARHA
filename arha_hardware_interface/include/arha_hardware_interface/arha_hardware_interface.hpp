@@ -86,6 +86,8 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::thread polling_thread_;
         std::atomic<bool> stop_polling_{false};
 
+        void pollingLoop();
+
 };
 }
 

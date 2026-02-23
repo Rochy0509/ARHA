@@ -14,9 +14,7 @@ ArhaHardwareInterface::~ArhaHardwareInterface() {
 
     //safeguard in case driver_ is null so it skip motor disable
     if (driver_) {
-        for (const auto& limb : limb_names_) {
-            driver_->enableLimbMotors(limb, false);
-        }
+        driver_->enableMotors(false);
     }
 }
 
@@ -95,4 +93,49 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_configure(const rcl
     return hardware_interface::CallbackReturn::SUCCESS;
 }
 
+hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclcpp_lifecycle::State& /*prev_state*/){
+    RCLCPP_INFO(getLogger(), "Activating ARHA hardware");
+
+    auto err = driver_->enableMotors(true);
+    
+    //check for any error
+    if (err != arha_tcp_driver::DriverError::SUCCESS){
+        RCLCPP_FATAL(getLogger(), "Failed to enable motors: %s",
+        driver_->getLastErrorMessage().c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+    }
+    else {
+        RCLCPP_INFO(getLogger(), "Motors Enabled!");
+    }
+
+    //start polling_thread
+    stop_polling_ = false;
+    polling_thread_ = std::thread(&ArhaHardwareInterface::pollingLoop, this);
+
+    return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn ArhaHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& /*prev_state*/){
+    
+    //stoping polling thread
+    stop_polling_ = true;
+    if (polling_thread_.joinable()){
+        polling_thread_.join();
+    }
+    
+    //disabling all motors
+    auto err = driver_->enableMotors(false);
+
+    //check for errors
+    if (err != arha_tcp_driver::DriverError::SUCCESS){
+        RCLCPP_FATAL(getLogger(), "Failed to disable all motors: %s",
+        driver_->getLastErrorMessage().c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+    }
+    else {
+        RCLCPP_INFO(getLogger(), "Motors disabled!");
+    }
+
+    return hardware_interface::CallbackReturn::SUCCESS;
+}
 }
