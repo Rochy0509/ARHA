@@ -51,4 +51,7 @@ void motor_enable_all(bool enable);
 void motor_clear_errors(uint8_t limb, uint32_t motor_id);
 void motor_clear_errors_all(void);
 
+/* Zero encoder: set current position as zero, reset, and verify */
+bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num_motors);
+
 #endif /* MOTOR_CONTROL_H */

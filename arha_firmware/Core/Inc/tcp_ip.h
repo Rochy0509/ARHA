@@ -49,6 +49,7 @@ typedef enum {
     CMD_RESET_ERRORS        = 0x22,
     CMD_ENABLE_MOTORS       = 0x23,
     CMD_ENABLE_LIMB_MOTORS  = 0x24,
+    CMD_SET_ENCODER_ZERO    = 0x30,
 
     CMD_PING                = 0xFF,
 } ProtocolCmd_t;
