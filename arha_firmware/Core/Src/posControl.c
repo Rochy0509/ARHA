@@ -33,23 +33,49 @@ void init_pos_control(void)
 static void pos_control_task(void *argument)
 {
     (void)argument;
-    // motor_clear_errors_all();
-    // motor_rezero_position(LIMB_RIGHT_ARM, 2);
-    // motor_rezero_position(LIMB_RIGHT_ARM, 6);
+    osDelay(2000);
     motor_set_position(LIMB_RIGHT_ARM, 2, 0.0);
     motor_set_position(LIMB_RIGHT_ARM, 6, 0.0);
-    osDelay(2000); /* Allow motors to reach initial position */
+    osDelay(2000);
 
 
-
-    float target_pos[2] = {0.0f, 0.1f}; /* Example target position */
+    float target_pos[2] = {0.0f, 0.0f}; /* Example target position */
     float *joints = inverse_kinematics(target_pos);
-    motor_set_position(LIMB_RIGHT_ARM, 2, joints[0]);
-    motor_set_position(LIMB_RIGHT_ARM, 6, joints[1]);
-    // motor_set_velocity(LIMB_RIGHT_ARM, 2, 0.5);
+
+    float target_poses[][2] = {
+        //x sweep
+        {0.0f, 0.0f},
+        {-0.1f, 0.0f},
+        {-0.2f, 0.0f},
+        {-0.1f, 0.0f},
+        {0.0f, 0.0f},
+        {0.1f, 0.0f},
+        {0.2f, 0.0f},
+        {0.1f, 0.0f},
+        {0.0f, 0.0f},
+
+        //y sweep
+        {0.0f, 0.0f},
+        {0.0f, -0.1f},
+        {0.0f, -0.2f},
+        {0.0f, -0.1f},
+        {0.0f, 0.0f},
+        {0.0f, 0.1f},
+        {0.0f, 0.2f},
+        {0.0f, 0.1f},
+        {0.0f, 0.0f}
+    };
+    float delay = 2000; /* ms */
+    int i = 0;
     /* Periodic control loop */
     for (;;)
     {
-        osDelay(POS_CONTROL_PERIOD_MS);
+        float *target_joints = inverse_kinematics(target_poses[i]);
+        motor_set_position(LIMB_RIGHT_ARM, 2, target_joints[0]);
+        motor_set_position(LIMB_RIGHT_ARM, 6, target_joints[1]);
+        i = (i + 1) % (sizeof(target_poses) / sizeof(target_poses[0]));
+        osDelay(delay);
+
+        // osDelay(POS_CONTROL_PERIOD_MS);
     }
 }
