@@ -12,6 +12,8 @@
 
 #include "tcp_ip.h"
 #include "motor_control.h"
+#include "myactuator.h"
+#include "fdcan.h"
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/sys.h"
@@ -289,6 +291,33 @@ static void handle_enable_limb_motors(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_ENABLE_LIMB_MOTORS);
 }
 
+/* CMD 0x30: Set current motor positions as encoder zero */
+static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
+                                     struct netconn *conn) {
+    uint8_t limb;
+    uint16_t off = parse_limb_name(payload, len, &limb);
+    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) {
+        uint8_t resp = 0;
+        send_response(conn, CMD_SET_ENCODER_ZERO, &resp, 1); return;
+    }
+
+    uint8_t num = payload[off++];
+    if (off + num * 4 > len) {
+        uint8_t resp = 0;
+        send_response(conn, CMD_SET_ENCODER_ZERO, &resp, 1); return;
+    }
+
+    uint32_t motor_ids[MAX_MOTORS_PER_LIMB];
+    for (uint8_t i = 0; i < num && i < MAX_MOTORS_PER_LIMB; i++) {
+        motor_ids[i] = read_u32(&payload[off]);
+        off += 4;
+    }
+
+    bool ok = motor_set_encoder_zero(limb, motor_ids, num);
+    uint8_t resp = ok ? 1 : 0;
+    send_response(conn, CMD_SET_ENCODER_ZERO, &resp, 1);
+}
+
 /* ─── Command dispatch ─── */
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
@@ -321,6 +350,8 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
             handle_enable_motors(payload, len, conn);    break;
         case CMD_ENABLE_LIMB_MOTORS:
             handle_enable_limb_motors(payload, len, conn); break;
+        case CMD_SET_ENCODER_ZERO:
+            handle_set_encoder_zero(payload, len, conn);   break;
 
         /* Keepalive */
         case CMD_PING:
