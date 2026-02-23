@@ -382,4 +382,7 @@ void ArhaHardwareInterface::pollingLoop() {
     }
 }
 
-}
+} //namespace arha_hardware_interface
+
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(arha_hardware_interface::ArhaHardwareInterface, hardware_interface::SystemInterface)
