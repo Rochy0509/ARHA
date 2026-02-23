@@ -61,21 +61,38 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     }
 
     // extracting connection settings for ARHA_TCP_DRIVER from URDF
-    arha_tcp_driver::DriverConfig config;
-    config.ip_address = info.hardware_parameters.at("ip_address");
-    config.port = std::stoi(info.hardware_parameters.at("port"));
+    driver_config_.ip_address = info.hardware_parameters.at("ip_address");
+    driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
 
+    stop_polling_ = false;
+    return hardware_interface::CallbackReturn::SUCCESS;
+}
+
+hardware_interface::CallbackReturn ArhaHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*prev_state*/){
+    
     //creating driver_ with config
-    driver_ = std::make_unique<arha_tcp_driver::arhaTCPDriver>(config);
+    driver_ = std::make_unique<arha_tcp_driver::arhaTCPDriver>(driver_config_);
 
     //Registering each limb
     for (const auto& limb : limb_names_){
         driver_->registerLimb({limb, motor_ids_[limb]});
     }
 
-    stop_polling_ = false;
+    //starting connection
+    auto err = driver_->connect();
+
+    //checking if the stm32 was not reached to start connection
+    if (err != arha_tcp_driver::DriverError::SUCCESS){
+        RCLCPP_FATAL(getLogger(), "Failed to connect to STM32: %s", 
+        driver_->getLastErrorMessage().c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+    }
+    else {
+        RCLCPP_INFO(getLogger(), "Connected to STM32 at %s:%d", 
+        driver_config_.ip_address.c_str(), driver_config_.port);
+    }
+
     return hardware_interface::CallbackReturn::SUCCESS;
 }
-
 
 }

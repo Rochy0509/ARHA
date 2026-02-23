@@ -79,6 +79,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> effort_command_buffer_;
 
         // Communication driver
+        arha_tcp_driver::DriverConfig driver_config_;
         std::unique_ptr<arha_tcp_driver::arhaTCPDriver> driver_;
 
         // Async polling thread
