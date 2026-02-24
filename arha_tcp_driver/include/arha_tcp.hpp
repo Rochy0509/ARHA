@@ -100,6 +100,9 @@ namespace arha_tcp_driver {
             DriverError enableMotors(bool enable);
             DriverError enableLimbMotors(const std::string& limb_name, bool enable);
 
+            // Calibration
+            DriverError setEncoderZero(const std::string& limb_name);
+
             // Status and diagnostics
             std::string getLastErrorMessage() const;
             const DriverConfig& getConfig() const { return config_; }
@@ -129,6 +132,7 @@ namespace arha_tcp_driver {
                 RESET_ERRORS        = 0x22,
                 ENABLE_MOTORS       = 0x23,
                 ENABLE_LIMB_MOTORS  = 0x24,
+                SET_ENCODER_ZERO    = 0x30,
                 PING                = 0xFF
             };
 

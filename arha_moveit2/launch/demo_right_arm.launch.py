@@ -166,35 +166,14 @@ def launch_setup(context, *args, **kwargs):
     # Delay starting move_group slightly to let hardware/controllers settle
     delayed_move_group = TimerAction(period=2.0, actions=[move_group_node])
 
-    # Zero motors before bringing up controllers/move_group
-    zero_script_path = os.path.join(
-        get_package_prefix("arha_moveit2"),
-        "lib",
-        "arha_moveit2",
-        "zero_right_arm_motors.py",
-    )
-    zero_motors = ExecuteProcess(
-        cmd=[zero_script_path],
-        name="zero_right_arm_motors",
-        output="screen",
-    )
-
-    # Start the rest after zeroing completes
-    start_after_zero = RegisterEventHandler(
-        OnProcessExit(
-            target_action=zero_motors,
-            on_exit=[
-                robot_state_publisher,
-                rviz_node,
-                static_tf,
-                ros2_control_node,
-                left_arm_static_js,
-                delayed_move_group,
-                *load_controllers,
-            ],
-        )
-    )
-
-    nodes_to_start = [zero_motors, start_after_zero]
+    nodes_to_start = [
+        robot_state_publisher,
+        rviz_node,
+        static_tf,
+        ros2_control_node,
+        left_arm_static_js,
+        delayed_move_group,
+        *load_controllers,
+    ]
 
     return nodes_to_start

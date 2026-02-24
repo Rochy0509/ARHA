@@ -11,8 +11,8 @@
 #include <rclcpp/logging.hpp>
 #include <rclcpp/time.hpp>
 #include <rclcpp_lifecycle/state.hpp>
-
 #include <realtime_tools/realtime_buffer.h>
+
 #include "arha_hardware_interface/visibility_control.hpp"
 
 #include <arha_tcp.hpp>
@@ -75,9 +75,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> velocity_state_buffer_;
         std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> effort_state_buffer_;
 
-        std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> position_command_buffer_;
-        std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> velocity_command_buffer_;
-        std::map<std::string, realtime_tools::RealtimeBuffer<std::vector<double>>> effort_command_buffer_;
+        double timeout_sec_{0.0};
 
         // Communication driver
         arha_tcp_driver::DriverConfig driver_config_;
@@ -96,11 +94,13 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::vector<double> hw_position_states_;     
         std::vector<double> hw_velocity_states_;  
         std::vector<double> hw_effort_states_;
+        std::vector<double> directions_;
         
         //flags to check if interfaces are running
-        bool position_interface_running_{false};
-        bool velocity_interface_running_{false};
-        bool effort_interface_running_{false};
+        std::atomic<bool> position_interface_running_{false};
+        std::atomic<bool> velocity_interface_running_{false};
+        std::atomic<bool> effort_interface_running_{false};
+        bool zero_on_startup_{false};
 };
 }
 

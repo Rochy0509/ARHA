@@ -1,4 +1,11 @@
+
 #include "arha_tcp.hpp"
+#include <vector>
+#include <cstdint>
+
+void arha_tcp_driver::arhaTCPDriver::encodeUInt8(std::vector<uint8_t>& buffer, uint8_t value) {
+    buffer.push_back(value);
+}
 
 #include <cmath>
 #include <cstring>
@@ -164,7 +171,7 @@ DriverError arhaTCPDriver::setPositions(const std::string& limb_name,
     }
 
     std::lock_guard<std::mutex> lock(socket_mutex_);
-    return sendAndWaitAck(CommandType::SET_LIMB_POSITIONS, payload);
+    return sendPacket(CommandType::SET_LIMB_POSITIONS, payload);
 }
 
 DriverError arhaTCPDriver::setVelocities(const std::string& limb_name,
@@ -242,39 +249,7 @@ DriverError arhaTCPDriver::getStates(const std::string& limb_name,
     err = receivePacket(response);
     if (err != DriverError::SUCCESS) return err;
 
-    // DEBUG: Hex dump the raw response so we can see exactly what the STM32 sent
-    if (config_.verbose) {
-        std::cout << "[arha_tcp DEBUG] getStates response (" << response.size()
-                  << " bytes):";
-        for (size_t i = 0; i < response.size(); ++i) {
-            if (i % 16 == 0) std::cout << "\n  ";
-            else if (i % 4 == 0) std::cout << " ";
-            char hex[4];
-            std::snprintf(hex, sizeof(hex), "%02X", response[i]);
-            std::cout << hex << " ";
-        }
-        std::cout << std::endl;
 
-        // Also try interpreting as different types for the first 24 bytes
-        std::cout << "[arha_tcp DEBUG] Interpretation attempts:" << std::endl;
-        for (size_t off = 0; off + 4 <= response.size() && off < 48; off += 4) {
-            float f;
-            std::memcpy(&f, response.data() + off, 4);
-            int32_t s;
-            std::memcpy(&s, response.data() + off, 4);
-            double deg = s * 0.01;
-            double rad = deg * (M_PI / 180.0);
-            char hex_str[12];
-            std::snprintf(hex_str, sizeof(hex_str), "%02X%02X%02X%02X",
-                          response[off], response[off+1], response[off+2], response[off+3]);
-            std::cout << "    offset " << off << " [" << hex_str << "]: "
-                      << "int32=" << s << " (centideg)"
-                      << "  -> " << deg << " deg"
-                      << "  -> " << rad << " rad"
-                      << "  (as float=" << f << ")"
-                      << std::endl;
-        }
-    }
 
     // Response layout per joint: position(4) + velocity(4) + effort(4) = 12 bytes
     const size_t expected_size = num_joints * 12;
@@ -438,6 +413,47 @@ DriverError arhaTCPDriver::enableLimbMotors(const std::string& limb_name, bool e
     return sendAndWaitAck(CommandType::ENABLE_LIMB_MOTORS, payload);
 }
 
+DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
+    auto err = validateLimb(limb_name);
+    if (err != DriverError::SUCCESS) return err;
+
+    const auto& limb = limbs_.at(limb_name);
+    std::vector<uint8_t> payload;
+    encodeString(payload, limb_name);
+    encodeUInt8(payload, static_cast<uint8_t>(limb.motor_ids.size()));
+    for (auto id : limb.motor_ids) {
+        encodeUInt32(payload, id);
+    }
+
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    err = sendPacket(CommandType::SET_ENCODER_ZERO, payload);
+    if (err != DriverError::SUCCESS) return err;
+
+    // Firmware takes ~6s (reset + reboot wait), use longer timeout
+    auto old_timeout = config_.socket_timeout_ms;
+    // Temporarily increase recv timeout for this blocking call
+    struct timeval tv;
+    tv.tv_sec = 10;
+    tv.tv_usec = 0;
+    setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    std::vector<uint8_t> response;
+    err = receivePacket(response);
+
+    // Restore original timeout
+    tv.tv_sec = old_timeout / 1000;
+    tv.tv_usec = (old_timeout % 1000) * 1000;
+    setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
+    if (err != DriverError::SUCCESS) return err;
+
+    if (response.empty() || response[0] != 1) {
+        return setLastError(DriverError::INVALID_DATA,
+            "Encoder zero failed for limb '" + limb_name + "'");
+    }
+    return DriverError::SUCCESS;
+}
+
 // Status and diagnostics
 
 std::string arhaTCPDriver::getLastErrorMessage() const {
@@ -514,6 +530,7 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
 
     frame.push_back(END_BYTE);
 
+
     // Send the entire frame
     size_t total_sent = 0;
     while (total_sent < frame.size()) {
@@ -588,11 +605,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
     auto err = recv_exact(&start, 1);
     if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive start byte");
     if (start != START_BYTE) {
-        if (config_.verbose) {
-            char h[8];
-            std::snprintf(h, sizeof(h), "0x%02X", start);
-            std::cout << "[arha_tcp DEBUG] Expected START_BYTE 0xAA, got " << h << std::endl;
-        }
         return setLastError(DriverError::INVALID_DATA, "Invalid start byte");
     }
 
@@ -604,11 +616,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
     uint16_t payload_len = static_cast<uint16_t>(header[1]) |
                            (static_cast<uint16_t>(header[2]) << 8);
 
-    if (config_.verbose) {
-        char h[32];
-        std::snprintf(h, sizeof(h), "cmd=0x%02X len=%u", header[0], payload_len);
-        std::cout << "[arha_tcp DEBUG] receivePacket: " << h << std::endl;
-    }
 
     // Read payload
     std::vector<uint8_t> payload(payload_len);
@@ -648,24 +655,9 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
 
     data = std::move(payload);
 
-    if (config_.verbose) {
-        std::cout << "[arha_tcp DEBUG] receivePacket payload (" << data.size() << " bytes):";
-        for (size_t i = 0; i < data.size(); ++i) {
-            if (i % 16 == 0) std::cout << "\n    ";
-            char h[4];
-            std::snprintf(h, sizeof(h), "%02X", data[i]);
-            std::cout << h << " ";
-        }
-        std::cout << std::endl;
-    }
 
     return DriverError::SUCCESS;
-}
 
-// Packet encoding (private) - all little-endian
-
-void arhaTCPDriver::encodeUInt8(std::vector<uint8_t>& buffer, uint8_t value) {
-    buffer.push_back(value);
 }
 
 void arhaTCPDriver::encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value) {
@@ -707,14 +699,6 @@ double arhaTCPDriver::decodeMotorValue(const std::vector<uint8_t>& buffer, size_
     std::memcpy(&f, buffer.data() + offset, 4);
     return static_cast<double>(f);
 }
-
-uint8_t arhaTCPDriver::calculateChecksum(const std::vector<uint8_t>& data) {
-    uint8_t cksum = 0;
-    for (auto b : data) cksum ^= b;
-    return cksum;
-}
-
-// Socket operations (private)
 
 DriverError arhaTCPDriver::createSocket() {
     socket_fd_ = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -774,15 +758,11 @@ DriverError arhaTCPDriver::setLastError(DriverError error, const std::string& me
 }
 
 void arhaTCPDriver::logError(const std::string& message) {
-    if (config_.verbose) {
-        std::cerr << "[arha_tcp ERROR] " << message << std::endl;
-    }
+    // Debug output removed
 }
 
 void arhaTCPDriver::logInfo(const std::string& message) {
-    if (config_.verbose) {
-        std::cout << "[arha_tcp INFO] " << message << std::endl;
-    }
+    // Debug output removed
 }
 
 } // namespace arha_tcp_driver
