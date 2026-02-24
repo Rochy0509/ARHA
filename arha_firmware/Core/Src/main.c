@@ -478,6 +478,16 @@ void StartDefaultTask(void *argument)
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
+
+  /* Quick CAN test: move motor 1 to +13 degrees */
+  osDelay(2000); /* Wait for motors to boot */
+  HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
+//  MYACTUATOR_ABS_POS_CL_CONTROL(1, 360, 13.0f);
+//  osDelay(3000); /* Wait for motor to reach target */
+//  MYACTUATOR_ABS_POS_CL_CONTROL(1, 360, 0.0f);
+//  osDelay(3000);
+  HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
+
   tcp_server_init();
 
   for(;;)

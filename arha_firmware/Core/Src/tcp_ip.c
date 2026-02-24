@@ -185,17 +185,16 @@ static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
                             struct netconn *conn) {
     uint8_t limb;
     uint16_t off = parse_limb_name(payload, len, &limb);
-    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) {
-        send_ack(conn, cmd); return;
-    }
+    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) return;
 
     uint8_t num_joints = payload[off++];
-    if (off + num_joints * 8 > len) { send_ack(conn, cmd); return; }
+    if (off + num_joints * 8 > len) return;
 
     for (uint8_t i = 0; i < num_joints; i++) {
         uint32_t motor_id = read_u32(&payload[off]);
         float value = read_float(&payload[off + 4]);
         off += 8;
+
         switch (cmd) {
             case CMD_SET_LIMB_POSITIONS:  motor_set_position(limb, motor_id, (double)value); break;
             case CMD_SET_LIMB_VELOCITIES: motor_set_velocity(limb, motor_id, (double)value); break;
@@ -203,7 +202,6 @@ static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
             default: break;
         }
     }
-    send_ack(conn, cmd);
 }
 
 /* CMD 0x17: Get limb motor states */
@@ -322,11 +320,15 @@ static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
                              uint16_t len, struct netconn *conn) {
+    /* GREEN: toggle on every TCP command received */
+    HAL_GPIO_TogglePin(LED_GREEN_Port, LED_GREEN_Pin);
+
     switch (cmd) {
         /* Single motor commands (0x01–0x04) */
         case CMD_SET_POSITION:
         case CMD_SET_VELOCITY:
         case CMD_SET_EFFORT:
+            HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
             handle_set_single(cmd, payload, len, conn);  break;
         case CMD_GET_STATE:
             handle_get_single(payload, len, conn);       break;
@@ -335,16 +337,20 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
         case CMD_SET_LIMB_POSITIONS:
         case CMD_SET_LIMB_VELOCITIES:
         case CMD_SET_LIMB_EFFORTS:
+            HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
             handle_set_limb(cmd, payload, len, conn);    break;
         case CMD_GET_LIMB_STATES:
             handle_get_limb(payload, len, conn);         break;
 
         /* Safety & control (0x20–0x24) */
         case CMD_EMERGENCY_STOP:
+            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_SET);
             handle_emergency_stop(conn);                 break;
         case CMD_EMERGENCY_STOP_LIMB:
+            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_SET);
             handle_emergency_stop_limb(payload, len, conn); break;
         case CMD_RESET_ERRORS:
+            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_RESET);
             handle_reset_errors(conn);                   break;
         case CMD_ENABLE_MOTORS:
             handle_enable_motors(payload, len, conn);    break;
@@ -369,6 +375,8 @@ static void tcp_handle_client(struct netconn *conn) {
     static uint8_t payload_buf[PROTO_MAX_PAYLOAD];
     NetReader_t reader;
     reader_init(&reader, conn);
+
+    // Encoder zeroing is now only performed when explicitly requested via CMD_SET_ENCODER_ZERO.
 
     netconn_set_recvtimeout(conn, TCP_RECV_TIMEOUT_MS);
 
@@ -406,7 +414,6 @@ static void tcp_handle_client(struct netconn *conn) {
 
         /* Valid frame — dispatch and toggle activity LED */
         dispatch_command(cmd, payload_buf, payload_len, conn);
-        HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
     }
 
     reader_cleanup(&reader);

@@ -53,5 +53,6 @@ void motor_clear_errors_all(void);
 
 /* Zero encoder: set current position as zero, reset, and verify */
 bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num_motors);
+extern const uint8_t limb_joint_counts[NUM_LIMBS];
 
 #endif /* MOTOR_CONTROL_H */
