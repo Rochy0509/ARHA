@@ -114,8 +114,8 @@ __attribute__((at(0x30000080))) ETH_DMADescTypeDef  DMATxDscrTab[ETH_TX_DESC_CNT
 
 #elif defined ( __GNUC__ ) /* GNU Compiler */
 
-ETH_DMADescTypeDef DMARxDscrTab[ETH_RX_DESC_CNT] __attribute__((section(".RxDescripSection"))); /* Ethernet Rx DMA Descriptors */
-ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT] __attribute__((section(".TxDescripSection")));   /* Ethernet Tx DMA Descriptors */
+ETH_DMADescTypeDef DMARxDscrTab[ETH_RX_DESC_CNT] __attribute__((section(".RxDecripSection"))); /* Ethernet Rx DMA Descriptors */
+ETH_DMADescTypeDef DMATxDscrTab[ETH_TX_DESC_CNT] __attribute__((section(".TxDecripSection")));   /* Ethernet Tx DMA Descriptors */
 
 #endif
 
@@ -239,13 +239,6 @@ static void low_level_init(struct netif *netif)
 
   hal_eth_init_status = HAL_ETH_Init(&heth);
 
-  /* AGGRESSIVE MAC FILTERING TO SURVIVE ROS 2 POINTCLOUD MULTICAST STORMS */
-  ETH_MACFilterConfigTypeDef MACFilterConf = {0};
-  if (HAL_ETH_GetMACFilterConfig(&heth, &MACFilterConf) == HAL_OK) {
-      MACFilterConf.PassAllMulticast = DISABLE; /* Drop all multicast (prevents LwIP realtime task from starving the CPU) */
-      HAL_ETH_SetMACFilterConfig(&heth, &MACFilterConf);
-  }
-
   memset(&TxConfig, 0 , sizeof(ETH_TxPacketConfig));
   TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
   TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;
@@ -350,7 +343,7 @@ static void low_level_init(struct netif *netif)
     MACConf.Speed = speed;
     HAL_ETH_SetMACConfig(&heth, &MACConf);
 
-    HAL_ETH_Start(&heth);
+    HAL_ETH_Start_IT(&heth);
     netif_set_up(netif);
     netif_set_link_up(netif);
 /* USER CODE BEGIN PHY_POST_CONFIG */
@@ -420,8 +413,32 @@ static err_t low_level_output(struct netif *netif, struct pbuf *p)
   TxConfig.TxBuffer = Txbuffer;
   TxConfig.pData = p;
 
-  /* Synchronous transmit — blocks until DMA completes (microseconds) */
-  HAL_ETH_Transmit(&heth, &TxConfig, ETH_DMA_TRANSMIT_TIMEOUT);
+  pbuf_ref(p);
+
+  do
+  {
+    if(HAL_ETH_Transmit_IT(&heth, &TxConfig) == HAL_OK)
+    {
+      errval = ERR_OK;
+    }
+    else
+    {
+
+      if(HAL_ETH_GetError(&heth) & HAL_ETH_ERROR_BUSY)
+      {
+        /* Wait for descriptors to become available */
+        osSemaphoreAcquire(TxPktSemaphore, ETHIF_TX_TIMEOUT);
+        HAL_ETH_ReleaseTxPacket(&heth);
+        errval = ERR_BUF;
+      }
+      else
+      {
+        /* Other error */
+        pbuf_free(p);
+        errval =  ERR_IF;
+      }
+    }
+  }while(errval == ERR_BUF);
 
   return errval;
 }
@@ -462,19 +479,20 @@ void ethernetif_input(void* argument)
 
   for( ;; )
   {
-    do
+    if (osSemaphoreAcquire(RxPktSemaphore, TIME_WAITING_FOR_INPUT) == osOK)
     {
-      p = low_level_input( netif );
-      if (p != NULL)
+      do
       {
-        if (netif->input( p, netif) != ERR_OK )
+        p = low_level_input( netif );
+        if (p != NULL)
         {
-          pbuf_free(p);
+          if (netif->input( p, netif) != ERR_OK )
+          {
+            pbuf_free(p);
+          }
         }
-      }
-    } while(p!=NULL);
-
-    osDelay(1);
+      } while(p!=NULL);
+    }
   }
 }
 
@@ -792,7 +810,7 @@ void ethernet_link_thread(void* argument)
 
   if(netif_is_link_up(netif) && (PHYLinkState <= LAN8742_STATUS_LINK_DOWN))
   {
-    HAL_ETH_Stop(&heth);
+    HAL_ETH_Stop_IT(&heth);
     netif_set_down(netif);
     netif_set_link_down(netif);
   }
@@ -831,7 +849,7 @@ void ethernet_link_thread(void* argument)
       MACConf.DuplexMode = duplex;
       MACConf.Speed = speed;
       HAL_ETH_SetMACConfig(&heth, &MACConf);
-      HAL_ETH_Start(&heth);
+      HAL_ETH_Start_IT(&heth);
       netif_set_up(netif);
       netif_set_link_up(netif);
     }

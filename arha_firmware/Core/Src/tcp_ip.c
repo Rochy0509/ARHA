@@ -23,6 +23,8 @@
 #include "task.h"
 #include <string.h>
 
+extern IWDG_HandleTypeDef hiwdg1;
+
 /* Map limb name string to index constant */
 static uint8_t limb_name_to_index(const char *name, uint8_t len) {
     if (len == 8 && memcmp(name, "left_arm", 8) == 0) return LIMB_LEFT_ARM;
@@ -388,6 +390,7 @@ static void tcp_handle_client(struct netconn *conn) {
 
     while (1) {
         uint8_t byte;
+        HAL_IWDG_Refresh(&hiwdg1);
 
         /* Sync: scan for start byte */
         if (!reader_read_byte(&reader, &byte)) break;
@@ -419,6 +422,7 @@ static void tcp_handle_client(struct netconn *conn) {
     }
 
     reader_cleanup(&reader);
+    motor_stop_all(); /* EMERGENCY STOP on timeout/disconnect */
 }
 
 /* ─── Server task ─── */
@@ -447,8 +451,13 @@ static void tcp_server_task(void *pvParameters) {
     netconn_listen_with_backlog(listener, 1);
     HAL_GPIO_WritePin(LED_GREEN_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 
+    // 500ms unblock interval so we can pet the watchdog
+    netconn_set_recvtimeout(listener, 500);
+
     while (1) {
         err = netconn_accept(listener, &client);
+        HAL_IWDG_Refresh(&hiwdg1);
+        
         if (err == ERR_OK) {
             HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
             HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_RESET);

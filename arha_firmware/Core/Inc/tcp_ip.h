@@ -24,7 +24,7 @@
 #define TCP_SERVER_PORT     5000
 #define TCP_TASK_STACK      256
 #define TCP_TASK_PRIORITY   24  // osPriorityNormal
-#define TCP_RECV_TIMEOUT_MS 5000
+#define TCP_RECV_TIMEOUT_MS 500
 
 // ── Robot topology ──
 #include "motor_control.h"

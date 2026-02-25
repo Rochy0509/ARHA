@@ -29,6 +29,8 @@ static const double arm_torque_constants[7] = {
     1.25,   /* ID 6: X6-8    - Wrist D    */
 };
 
+const uint8_t limb_joint_counts[NUM_LIMBS] = {6, 6, 0};
+
 // Neck motors are X6-8 (Kt = 1.25 Nm/A).
 static const double neck_torque_constant = 1.25;
 
@@ -37,6 +39,8 @@ static double get_torque_constant(uint8_t limb, uint32_t motor_id) {
     if (motor_id >= 1 && motor_id <= 6) return arm_torque_constants[motor_id];
     return 1.0; /* fallback */
 }
+
+#define CAN_RESPONSE_TIMEOUT_MS 50
 
 static void drain_can_queue(void) {
     FDCAN_RxMessage_t discard;
@@ -219,6 +223,7 @@ bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
         }
     }
 
+    bool success = (got_9c && got_92);
     if (!success) {
         // Drop message and flag error silently
     }

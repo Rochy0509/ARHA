@@ -55,6 +55,8 @@ FMAC_HandleTypeDef hfmac;
 DMA_HandleTypeDef hdma_fmac_rd;
 DMA_HandleTypeDef hdma_fmac_wr;
 
+IWDG_HandleTypeDef hiwdg1;
+
 UART_HandleTypeDef huart3;
 
 /* Definitions for defaultTask */
@@ -77,6 +79,7 @@ static void MX_CORDIC_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_FMAC_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_IWDG1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -121,11 +124,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  /* NOTE: MX_LWIP_Init() is called inside StartDefaultTask (FreeRTOS mode) */
   MX_CORDIC_Init();
   MX_FDCAN1_Init();
   MX_FMAC_Init();
   MX_USART3_UART_Init();
+  MX_IWDG1_Init();
   /* USER CODE BEGIN 2 */
 
    // Initialize FDCAN driver
@@ -209,9 +212,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_DIV1;
   RCC_OscInitStruct.HSICalibrationValue = 64;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 4;
@@ -352,6 +356,35 @@ static void MX_FMAC_Init(void)
 }
 
 /**
+  * @brief IWDG1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG1_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG1_Init 0 */
+
+  /* USER CODE END IWDG1_Init 0 */
+
+  /* USER CODE BEGIN IWDG1_Init 1 */
+
+  /* USER CODE END IWDG1_Init 1 */
+  hiwdg1.Instance = IWDG1;
+  hiwdg1.Init.Prescaler = IWDG_PRESCALER_256;
+  hiwdg1.Init.Window = 4095;
+  hiwdg1.Init.Reload = 249;
+  if (HAL_IWDG_Init(&hiwdg1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG1_Init 2 */
+
+  /* USER CODE END IWDG1_Init 2 */
+
+}
+
+/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -441,7 +474,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
