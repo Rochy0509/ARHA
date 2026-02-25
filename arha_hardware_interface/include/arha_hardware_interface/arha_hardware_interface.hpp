@@ -21,6 +21,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <mutex>
 #include <cmath>
 #include <fstream>
 #include <exception>
@@ -95,6 +96,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::vector<double> hw_velocity_states_;  
         std::vector<double> hw_effort_states_;
         std::vector<double> directions_;
+        std::mutex commands_mutex_;
         
         //flags to check if interfaces are running
         std::atomic<bool> position_interface_running_{false};

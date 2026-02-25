@@ -171,7 +171,7 @@ DriverError arhaTCPDriver::setPositions(const std::string& limb_name,
     }
 
     std::lock_guard<std::mutex> lock(socket_mutex_);
-    return sendPacket(CommandType::SET_LIMB_POSITIONS, payload);
+    return sendAndWaitAck(CommandType::SET_LIMB_POSITIONS, payload);
 }
 
 DriverError arhaTCPDriver::setVelocities(const std::string& limb_name,

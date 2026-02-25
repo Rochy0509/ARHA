@@ -33,7 +33,6 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     
     //for loop to extract information from URDF to set the joints to the limb so it match ARHA_TCP_DRIVER CONFIG
     for (const auto& joint : info.joints){
-
         std::string limb = joint.parameters.at("limb_name"); // get what limb is the joint assigned to
         std::string motor_id = joint.parameters.at("motor_id");
 
@@ -73,7 +72,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     // connection settings from URDF
     driver_config_.ip_address = info.hardware_parameters.at("ip_address");
     driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
-    driver_config_.socket_timeout_ms = 1500; // firmware needs ~600ms for 6-motor CAN reads
+    driver_config_.socket_timeout_ms = 5000; // Multi-second timeout tolerates heavy ROS 2 FastDDS PointCloud multicasts
     driver_config_.verbose = true;          // enable verbose to debug byte stream
 
     // optional zero on startup
@@ -131,18 +130,21 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
     auto err = driver_->enableMotors(true);
     //check for any error
     if (err != arha_tcp_driver::DriverError::SUCCESS){
-        RCLCPP_FATAL(getLogger(), "Failed to enable motors: %s",
+        RCLCPP_ERROR(getLogger(), "Failed to enable motors: %s. Continuing anyway to allow debug.",
         driver_->getLastErrorMessage().c_str());
-        return hardware_interface::CallbackReturn::ERROR;
     }
     else {
         RCLCPP_INFO(getLogger(), "Motors Enabled!");
         // Wait 0.5s for STM32 to power up drivers (matches Python script)
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-
     //start polling_thread
     stop_polling_ = false;
+    if (polling_thread_.joinable()){
+        stop_polling_ = true;
+        polling_thread_.join();
+        stop_polling_ = false;
+    }
     polling_thread_ = std::thread(&ArhaHardwareInterface::pollingLoop, this);
 
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -233,6 +235,8 @@ std::vector<hardware_interface::CommandInterface> ArhaHardwareInterface::export_
     for (const auto& limb_name : limb_names_){
         for (const auto& joint_name : joint_names_[limb_name]){
             command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_POSITION, &hw_position_commands_[i]);
+            command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_VELOCITY, &hw_velocity_commands_[i]);
+            command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_EFFORT, &hw_effort_commands_[i]);
             i++;
         }
     }
@@ -341,27 +345,46 @@ hardware_interface::return_type ArhaHardwareInterface::write(
 }
 
 void ArhaHardwareInterface::pollingLoop() {
-    constexpr auto cycle_time = std::chrono::milliseconds(200);
+    constexpr auto cycle_time = std::chrono::milliseconds(50); // 20 Hz
     uint32_t debug_counter = 0;
 
     while (!stop_polling_) {
         auto const now = std::chrono::steady_clock::now();
         auto const wakeup_time = now + cycle_time;
-        bool do_log = (debug_counter % 50 == 0); // log every ~10 seconds
-        bool do_send = (debug_counter % 2 == 0);  // even = send, odd = read
-
+        
+        // Log continuously to debug MoveIt trajectory vs State mismatch
+        bool do_log = true; 
         size_t index = 0;
 
         for (const auto& limb : limb_names_) {
             size_t n = joint_names_[limb].size();
 
-            if (do_send) {
-                // ── Send commands ──
-                if (position_interface_running_) {
-                    std::vector<double> cmds(n);
+            // ── Send commands ──
+            if (position_interface_running_) {
+                std::vector<double> cmds(n);
+                {
+                    std::lock_guard<std::mutex> lock(commands_mutex_);
                     for (size_t j = 0; j < n; ++j) {
                         cmds[j] = directions_[index + j] * hw_position_commands_[index + j];
                     }
+                }
+                
+                static std::map<std::string, std::vector<double>> last_cmds;
+                bool should_send = false;
+                if (last_cmds.find(limb) == last_cmds.end()) {
+                    last_cmds[limb] = std::vector<double>(n, 0.0);
+                    should_send = true;
+                } else {
+                    for (size_t j = 0; j < n; ++j) {
+                        if (std::abs(cmds[j] - last_cmds[limb][j]) > 1e-4) {
+                            should_send = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (should_send) {
+                    last_cmds[limb] = cmds;
                     if (do_log && !cmds.empty()) {
                         std::string s = "[DEBUG] SET_POS " + limb + ":";
                         for (size_t j = 0; j < cmds.size(); ++j)
@@ -373,42 +396,48 @@ void ArhaHardwareInterface::pollingLoop() {
                         RCLCPP_ERROR(getLogger(), "setPositions FAILED for %s: %s",
                             limb.c_str(), driver_->getLastErrorMessage().c_str());
                     }
-                } else if (velocity_interface_running_) {
-                    std::vector<double> cmds(n);
+                }
+            } else if (velocity_interface_running_) {
+                std::vector<double> cmds(n);
+                {
+                    std::lock_guard<std::mutex> lock(commands_mutex_);
                     for (size_t j = 0; j < n; ++j) {
                         cmds[j] = directions_[index + j] * hw_velocity_commands_[index + j];
                     }
-                    driver_->setVelocities(limb, cmds);
-                } else if (effort_interface_running_) {
-                    std::vector<double> cmds(n);
+                }
+                driver_->setVelocities(limb, cmds);
+            } else if (effort_interface_running_) {
+                std::vector<double> cmds(n);
+                {
+                    std::lock_guard<std::mutex> lock(commands_mutex_);
                     for (size_t j = 0; j < n; ++j) {
                         cmds[j] = directions_[index + j] * hw_effort_commands_[index + j];
                     }
-                    driver_->setEfforts(limb, cmds);
-                } else if (do_log) {
-                    RCLCPP_WARN(getLogger(), "No command interface active for %s", limb.c_str());
                 }
-            } else {
-                // ── Read states ──
-                std::vector<double> positions(n);
-                std::vector<double> velocities(n);
-                std::vector<double> efforts(n);
+                driver_->setEfforts(limb, cmds);
+            } else if (do_log) {
+                RCLCPP_WARN(getLogger(), "No command interface active for %s", limb.c_str());
+            }
+            
+            // ── Read states ──
+            std::vector<double> positions(n);
+            std::vector<double> velocities(n);
+            std::vector<double> efforts(n);
 
-                auto err = driver_->getStates(limb, positions, velocities, efforts);
-                if (err == arha_tcp_driver::DriverError::SUCCESS) {
-                    if (do_log) {
-                        std::string s = "[DEBUG] STATE " + limb + ":";
-                        for (size_t j = 0; j < n; ++j)
-                            s += " p=" + std::to_string(positions[j]);
-                        RCLCPP_INFO(getLogger(), "%s", s.c_str());
-                    }
-                    position_state_buffer_[limb].writeFromNonRT(positions);
-                    velocity_state_buffer_[limb].writeFromNonRT(velocities);
-                    effort_state_buffer_[limb].writeFromNonRT(efforts);
-                } else if (do_log) {
-                    RCLCPP_WARN(getLogger(), "getStates failed for %s: %s",
-                        limb.c_str(), driver_->getLastErrorMessage().c_str());
+            auto err = driver_->getStates(limb, positions, velocities, efforts);
+            if (err == arha_tcp_driver::DriverError::SUCCESS) {
+                if (do_log) {
+                    std::string s = "[DEBUG] STATE " + limb + ":";
+                    for (size_t j = 0; j < n; ++j)
+                        s += " p=" + std::to_string(positions[j]);
+                    RCLCPP_INFO(getLogger(), "%s", s.c_str());
                 }
+                position_state_buffer_[limb].writeFromNonRT(positions);
+                velocity_state_buffer_[limb].writeFromNonRT(velocities);
+                effort_state_buffer_[limb].writeFromNonRT(efforts);
+            } else if (do_log) {
+                RCLCPP_WARN(getLogger(), "getStates failed for %s: %s",
+                    limb.c_str(), driver_->getLastErrorMessage().c_str());
             }
 
             index += n;

@@ -59,4 +59,8 @@ if(BUILD_ARHA_TESTS)
   add_executable(torque_test test/torque_test.cpp)
   target_link_libraries(torque_test PRIVATE ${PROJECT_NAME})
   install(TARGETS torque_test DESTINATION bin)
+
+  add_executable(test_sequence test/test_sequence.cpp)
+  target_link_libraries(test_sequence PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_sequence DESTINATION bin)
 endif()
