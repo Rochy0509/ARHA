@@ -202,6 +202,8 @@ static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
             default: break;
         }
     }
+    
+    send_ack(conn, cmd);
 }
 
 /* CMD 0x17: Get limb motor states */

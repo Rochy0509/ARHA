@@ -1,30 +1,39 @@
 #include "myactuator.h"
 #include "string.h"
 #include "main.h"  // For LED pins
+#include "cmsis_os.h"
 
 
 void sendCANPacket(uint8_t motor_id, uint8_t* data){
-	FDCAN_TxHeaderTypeDef TxHeader;
+    FDCAN_TxHeaderTypeDef TxHeader;
 
-	TxHeader.Identifier = 0x140 + motor_id;
-	TxHeader.IdType = FDCAN_STANDARD_ID;
-	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
-	TxHeader.DataLength = FDCAN_DLC_BYTES_8;
-	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
-	TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
-	TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
-	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
-	TxHeader.MessageMarker = 0;
+    TxHeader.Identifier = 0x140 + motor_id;
+    TxHeader.IdType = FDCAN_STANDARD_ID;
+    TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+    TxHeader.DataLength = FDCAN_DLC_BYTES_8;
+    TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+    TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+    TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+    TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+    TxHeader.MessageMarker = 0;
 
-	// Wait for FIFO space
-	uint32_t timeout = 100000;
-	while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0 && timeout > 0) {
-		timeout--;
-	}
+    // I wait up to 50ms for a free TX hardware mailbox.
+    uint32_t timeout = 500000;
+    while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0 && timeout > 0) {
+        timeout--;
+    }
 
-	if (timeout > 0) {
-		HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, data);
-	}
+    if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
+        uint32_t retry = 500000;
+        while (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, data) != HAL_OK && retry > 0) {
+            retry--;
+        }
+        if (retry == 0) {
+            // Drop packet quietly if hardware is permanently wedged.
+        }
+    } else {
+        // Drop packet quietly if TX queue is completely full.
+    }
 }
 
 void MYACTUATOR_READ_PID(uint8_t motor_id,  PID_PARAM_INDEX pid_index){

@@ -239,6 +239,13 @@ static void low_level_init(struct netif *netif)
 
   hal_eth_init_status = HAL_ETH_Init(&heth);
 
+  /* AGGRESSIVE MAC FILTERING TO SURVIVE ROS 2 POINTCLOUD MULTICAST STORMS */
+  ETH_MACFilterConfigTypeDef MACFilterConf = {0};
+  if (HAL_ETH_GetMACFilterConfig(&heth, &MACFilterConf) == HAL_OK) {
+      MACFilterConf.PassAllMulticast = DISABLE; /* Drop all multicast (prevents LwIP realtime task from starving the CPU) */
+      HAL_ETH_SetMACFilterConfig(&heth, &MACFilterConf);
+  }
+
   memset(&TxConfig, 0 , sizeof(ETH_TxPacketConfig));
   TxConfig.Attributes = ETH_TX_PACKETS_FEATURES_CSUM | ETH_TX_PACKETS_FEATURES_CRCPAD;
   TxConfig.ChecksumCtrl = ETH_CHECKSUM_IPHDR_PAYLOAD_INSERT_PHDR_CALC;

@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "fdcan.h"
+#include "motor_control.h"
 #include "myactuator.h"
 #include "tcp_ip.h"
 /* USER CODE END Includes */
@@ -479,13 +480,23 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
 
-  /* Quick CAN test: move motor 1 to +13 degrees */
-  osDelay(2000); /* Wait for motors to boot */
+  /* User Setup: Wait for motors to boot */
+  osDelay(2000); 
   HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
-//  MYACTUATOR_ABS_POS_CL_CONTROL(1, 360, 13.0f);
-//  osDelay(3000); /* Wait for motor to reach target */
-//  MYACTUATOR_ABS_POS_CL_CONTROL(1, 360, 0.0f);
-//  osDelay(3000);
+
+  /* 1. Set current positions as ZERO for motors 1 through 6 */
+  uint32_t arm_motors[6] = {1, 2, 3, 4, 5, 6};
+  motor_set_encoder_zero(LIMB_RIGHT_ARM, arm_motors, 6);
+  osDelay(100);
+
+  /* 2. Hardware test sequence disabled for TCP validation. */
+  // for (uint32_t m = 1; m <= 6; m++) {
+  //     motor_set_position(LIMB_RIGHT_ARM, m, 15.0f * (3.14159265f / 180.0f)); // Move to 15.0°
+  //     osDelay(3000);
+  //     motor_set_position(LIMB_RIGHT_ARM, m, 0.0f); 
+  //     osDelay(3000);
+  // }
+
   HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
 
   tcp_server_init();

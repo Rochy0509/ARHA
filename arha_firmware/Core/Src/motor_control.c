@@ -1,14 +1,4 @@
-/*
- * motor_control.c
- *
- * Motor abstraction layer for ARHA Robot.
- * Handles:
- * - TCP Radians <-> MyActuator Degrees/LSB conversion
- * - Limb -> FDCAN Channel mapping
- * - CAN Read/Write via myactuator.c and fdcan.c
- *
- * Default config: Right Arm (ID 1) uses FDCAN1.
- */
+// I handle radians to MyActuator LSB conversions, and map limbs to FDCAN1.
 
 #include "motor_control.h"
 #include "myactuator.h"
@@ -18,12 +8,7 @@
 #include <math.h>
 #include <string.h>
 
-/* Number of joints per limb */
-const uint8_t limb_joint_counts[NUM_LIMBS] = {6, 6, 2};
 
-/* Radians to Degrees conversion factor
- * 1 rad = 180 / PI degrees
- */
 #define RAD_TO_DEG (180.0 / M_PI)
 #define DEG_TO_RAD (M_PI / 180.0)
 
@@ -32,15 +17,6 @@ const uint8_t limb_joint_counts[NUM_LIMBS] = {6, 6, 2};
 #define MYA_LSB_TO_DEG 0.01
 
 #define BLINK_DELAY_MS 100
-
-static void blink_led(GPIO_TypeDef* port, uint16_t pin, int times) {
-    for (int i = 0; i < times; ++i) {
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);
-        HAL_Delay(BLINK_DELAY_MS);
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
-        HAL_Delay(BLINK_DELAY_MS);
-    }
-}
 
 /* Torque constants (Nm/A) per motor ID — both arms share the same layout */
 static const double arm_torque_constants[7] = {
@@ -53,7 +29,7 @@ static const double arm_torque_constants[7] = {
     1.25,   /* ID 6: X6-8    - Wrist D    */
 };
 
-/* Neck motors are both X6-8 (Kt = 1.25 Nm/A) */
+// Neck motors are X6-8 (Kt = 1.25 Nm/A).
 static const double neck_torque_constant = 1.25;
 
 static double get_torque_constant(uint8_t limb, uint32_t motor_id) {
@@ -62,30 +38,21 @@ static double get_torque_constant(uint8_t limb, uint32_t motor_id) {
     return 1.0; /* fallback */
 }
 
-/* Timeout for waiting for CAN response (ms) */
-#define CAN_RESPONSE_TIMEOUT_MS 50
-
-/* Flush stale CAN responses before polling for a specific response */
 static void drain_can_queue(void) {
     FDCAN_RxMessage_t discard;
     while (FDCAN_Driver_GetMessage(&discard)) { /* drain */ }
 }
 
-/* Helper: Convert MyActuator Position LSB to Radians */
-static double mya_pos_to_rad(int32_t lsb) {
-    double deg = (double)lsb * MYA_LSB_TO_DEG;
-    return deg * DEG_TO_RAD;
-}
 
-/* Convert Rad/s to MyActuator Velocity (dps) */
+
 static int32_t rads_to_mya_vel(double rad_s) {
     double dps = rad_s * RAD_TO_DEG;
     return (int32_t)dps; 
 }
 
-/* Convert Effort (Amps) to MyActuator Current LSB */
 static int16_t effort_to_mya_current(double effort) {
-    return (int16_t)(effort * 100.0); /* Assume 0.01A per LSB */
+    // Assume 0.01A per LSB.
+    return (int16_t)(effort * 100.0);
 }
 
 /*
@@ -95,12 +62,8 @@ void motor_control_init(void) {
     /* Initialize FDCAN driver handled in main.c */
 }
 
-/*
- * Motor Enable/Disable
- */
 void motor_enable(uint8_t limb, uint32_t motor_id, bool enable) {
     if (enable) {
-        /* No action: allow immediate reaction to next command */
     } else {
         MYACTUATOR_MOTOR_SHUTDOWN(motor_id);
     }
@@ -138,133 +101,158 @@ void motor_clear_errors_all(void) {
     }
 }
 
-/* Set position (rads) with default speed limit */
 void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad) {
     float deg = (float)(position_rad * RAD_TO_DEG);
-    int32_t lsb = (int32_t)(deg * DEG_TO_MYA_LSB);
-    MYACTUATOR_ABS_POS_CL_CONTROL(motor_id, (int16_t)DEFAULT_SPEED_LIMIT_DPS, lsb);
     
-    /* 0xA4 replies with the motor state. If we don't wait for and clear this, 
-     * it fills up the rx queue. Wait briefly for the response to avoid overflow. */
-    uint32_t start = HAL_GetTick();
-    FDCAN_RxMessage_t msg;
-    while ((HAL_GetTick() - start) < CAN_RESPONSE_TIMEOUT_MS) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0xA4) break;
+    // Position sent in degrees; MYACTUATOR_ABS_POS_CL_CONTROL scales to LSB internally
+    
+    uint8_t retries = 1;
+    bool success = false;
+    while (retries > 0 && !success) {
+        drain_can_queue();
+        MYACTUATOR_ABS_POS_CL_CONTROL(motor_id, (int16_t)DEFAULT_SPEED_LIMIT_DPS, deg);
+
+        // 5ms timeout blocks the RTOS minimally if a packet drops.
+        uint32_t start = HAL_GetTick();
+        FDCAN_RxMessage_t msg;
+        while ((HAL_GetTick() - start) < 5) {
+            if (FDCAN_Driver_GetMessage(&msg)) {
+                if (msg.motor_id == motor_id && msg.command == 0xA4) {
+                    success = true;
+                    break;
+                }
+            }
         }
+        retries--;
     }
 }
 
 void motor_set_velocity(uint8_t limb, uint32_t motor_id, double velocity_rad_s) {
-    /* Convert Rad/s to Degrees/s (dps) */
     int32_t dps = rads_to_mya_vel(velocity_rad_s);
-    MYACTUATOR_SPEED_CL_CONTROL(motor_id, dps);
+    
+    uint8_t retries = 1;
+    bool success = false;
+    while (retries > 0 && !success) {
+        drain_can_queue();
+        MYACTUATOR_SPEED_CL_CONTROL(motor_id, dps);
 
-    /* 0xA2 replies with motor state. Discard to prevent RX queue overflow. */
-    uint32_t start = HAL_GetTick();
-    FDCAN_RxMessage_t msg;
-    while ((HAL_GetTick() - start) < CAN_RESPONSE_TIMEOUT_MS) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0xA2) break;
+        uint32_t start = HAL_GetTick();
+        FDCAN_RxMessage_t msg;
+        while ((HAL_GetTick() - start) < 5) {
+            if (FDCAN_Driver_GetMessage(&msg)) {
+                if (msg.motor_id == motor_id && msg.command == 0xA2) {
+                    success = true;
+                    break;
+                }
+            }
         }
+        retries--;
     }
 }
 
 void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort) {
-    /* Convert Effort to Current LSB */
     int16_t current = effort_to_mya_current(effort);
-    MYACTUATOR_TORQUE_CL_CONTROL(motor_id, current);
+    
+    uint8_t retries = 1;
+    bool success = false;
+    while (retries > 0 && !success) {
+        drain_can_queue();
+        MYACTUATOR_TORQUE_CL_CONTROL(motor_id, current);
 
-    /* 0xA1 replies with motor state. Discard to prevent RX queue overflow. */
-    uint32_t start = HAL_GetTick();
-    FDCAN_RxMessage_t msg;
-    while ((HAL_GetTick() - start) < CAN_RESPONSE_TIMEOUT_MS) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0xA1) break;
+        uint32_t start = HAL_GetTick();
+        FDCAN_RxMessage_t msg;
+        while ((HAL_GetTick() - start) < 5) {
+            if (FDCAN_Driver_GetMessage(&msg)) {
+                if (msg.motor_id == motor_id && msg.command == 0xA1) {
+                    success = true;
+                    break;
+                }
+            }
         }
+        retries--;
     }
 }
 
-/* Read motor state using 0x92 (position) + 0x9C (velocity, current, temp).
- * Returns true if at least position was read successfully. */
+// I request 0x9C for vitals and 0x92 for the absolute multi-turn angle.
 bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
                      double *pos, double *vel, double *eff, double *temp) {
-	blink_led(LED_YELLOW_Port, LED_YELLOW_Pin, 1);
     FDCAN_RxMessage_t msg;
     uint32_t start_tick;
-    bool got_a4 = false;
+    bool got_9c = false;
+    bool got_92 = false;
 
-    // Wait for 0xA4 feedback (after position command)
+    drain_can_queue();
+
+    MYACTUATOR_READ_MOTOR_STATUS_2(motor_id);
     start_tick = HAL_GetTick();
     while ((HAL_GetTick() - start_tick) < CAN_RESPONSE_TIMEOUT_MS) {
         if (FDCAN_Driver_GetMessage(&msg)) {
-            if (msg.motor_id == motor_id && msg.command == 0xA4) {
-                // DATA[1]: temperature (int8_t, 1°C/LSB)
-                if (temp) {
-                    *temp = (double)(int8_t)msg.data[1];
-                }
-                // DATA[2-3]: current (int16_t, 0.01A/LSB)
+            if (msg.motor_id == motor_id && msg.command == 0x9C) {
+                if (temp) *temp = (double)(int8_t)msg.data[1];
                 if (eff) {
                     int16_t iq = (int16_t)(msg.data[2] | (msg.data[3] << 8));
-                    double current_A = (double)iq * 0.01;
-                    *eff = current_A * get_torque_constant(limb_index, motor_id);
+                    *eff = (double)iq * 0.01 * get_torque_constant(limb_index, motor_id);
                 }
-                // DATA[4-5]: speed (int16_t, 1 dps/LSB)
                 if (vel) {
                     int16_t speed_dps = (int16_t)(msg.data[4] | (msg.data[5] << 8));
                     *vel = (double)speed_dps * DEG_TO_RAD;
                 }
-                // DATA[6-7]: angle (int16_t, 1 degree/LSB)
-                if (pos) {
-                    int16_t angle_deg = (int16_t)(msg.data[6] | (msg.data[7] << 8));
-                    *pos = (double)angle_deg * DEG_TO_RAD;
-                }
-                got_a4 = true;
+                got_9c = true;
                 break;
             }
         }
     }
 
-    if (got_a4) {
-        blink_led(LED_RED_Port, LED_RED_Pin, 3); // Success: blink 3 times
-    } else {
-        blink_led(LED_RED_Port, LED_RED_Pin, 5); // Error: blink 5 times
+    MYACTUATOR_READ_MULTI_ENC_ANGLE(motor_id);
+    start_tick = HAL_GetTick();
+    while ((HAL_GetTick() - start_tick) < CAN_RESPONSE_TIMEOUT_MS) {
+        if (FDCAN_Driver_GetMessage(&msg)) {
+            if (msg.motor_id == motor_id && msg.command == 0x92) {
+                if (pos) {
+                    int32_t angle = 0;
+                    memcpy(&angle, &msg.data[4], 4);
+                    *pos = (double)angle * 0.01 * DEG_TO_RAD;
+                }
+                got_92 = true;
+                break;
+            }
+        }
     }
 
-    return got_a4;
+    if (!success) {
+        // Drop message and flag error silently
+    }
+
+    return success;
 }
 
-/* Zero encoder for all motors in a limb. Retries until every motor
- * reads within 0.05° of zero, up to MAX_ZERO_ATTEMPTS times. */
+// I burn the zero-offset to ROM, reboot the motors, and retry until all read within 0.5 degrees of zero.
 bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num_motors) {
-    #define ZERO_TOLERANCE_DEG 0.05
+    #define ZERO_TOLERANCE_DEG 0.5
     #define MOTOR_REBOOT_MS    5000
     #define MAX_ZERO_ATTEMPTS  5
 
     for (uint8_t attempt = 0; attempt < MAX_ZERO_ATTEMPTS; attempt++) {
-        /* Set current position as encoder zero */
+        drain_can_queue();
         for (uint8_t i = 0; i < num_motors; i++) {
-            drain_can_queue();
             MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(motor_ids[i]);
             osDelay(100);
         }
 
-        /* Reset motors */
         for (uint8_t i = 0; i < num_motors; i++) {
             MYACTUATOR_RESET_MOTOR(motor_ids[i]);
-            osDelay(10);
+            osDelay(100);
         }
 
-        /* Wait for reboot */
         osDelay(MOTOR_REBOOT_MS);
 
-        /* Check if all motors are within tolerance */
         bool all_ok = true;
         for (uint8_t i = 0; i < num_motors; i++) {
             double pos = 0;
             if (motor_get_state(limb, motor_ids[i], &pos, NULL, NULL, NULL)) {
-                if (fabs(pos * RAD_TO_DEG) > ZERO_TOLERANCE_DEG)
+                if (fabs(pos * RAD_TO_DEG) > ZERO_TOLERANCE_DEG) {
                     all_ok = false;
+                }
             } else {
                 all_ok = false;
             }
@@ -273,5 +261,5 @@ bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num
         if (all_ok) return true;
     }
 
-    return false; /* still not zeroed after max attempts */
+    return false;
 }
