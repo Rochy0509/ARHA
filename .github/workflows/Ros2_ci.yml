@@ -74,9 +74,9 @@ jobs:
           submodules: recursive
           path: ros2_ws/src/arha
 
-      - name: Import all dependency repos (vcs)
+      - name: Clone robotiq_hande_description
         run: |
-          vcs import ros2_ws/src < ros2_ws/src/arha/arha.repos
+          git clone https://github.com/Rochy0509/robotiq_hande_description.git ros2_ws/src/robotiq_hande_description
 
       - name: Install system dependencies
         run: |
@@ -175,9 +175,9 @@ jobs:
           submodules: recursive
           path: ros2_ws/src/arha
 
-      - name: Import all dependency repos (vcs)
+      - name: Clone robotiq_hande_description
         run: |
-          vcs import ros2_ws/src < ros2_ws/src/arha/arha.repos
+          git clone https://github.com/Rochy0509/robotiq_hande_description.git ros2_ws/src/robotiq_hande_description
 
       - name: Install dependencies
         run: |
@@ -245,9 +245,9 @@ jobs:
           submodules: recursive
           path: ros2_ws/src/arha
 
-      - name: Import all dependency repos (vcs)
+      - name: Clone robotiq_hande_description
         run: |
-          vcs import ros2_ws/src < ros2_ws/src/arha/arha.repos
+          git clone https://github.com/Rochy0509/robotiq_hande_description.git ros2_ws/src/robotiq_hande_description
 
       - name: Install MoveIt2 + description tools
         run: |
