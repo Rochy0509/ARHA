@@ -10,8 +10,9 @@
 #include <rclcpp/logger.hpp>
 #include <rclcpp/logging.hpp>
 #include <rclcpp/time.hpp>
+#include <rclcpp/clock.hpp>
 #include <rclcpp_lifecycle/state.hpp>
-#include <realtime_tools/realtime_buffer.h>
+#include <realtime_tools/realtime_buffer.hpp>
 
 #include "arha_hardware_interface/visibility_control.hpp"
 
@@ -34,7 +35,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         ArhaHardwareInterface() = default;
         ~ArhaHardwareInterface() override;
 
-        //standard lifecycle methods ros2_control
+        // Standard lifecycle methods for ros2_control
         CallbackReturn on_init(const hardware_interface::HardwareInfo& info) override;
         CallbackReturn on_configure(const rclcpp_lifecycle::State& prev_state) override;
         CallbackReturn on_cleanup(const rclcpp_lifecycle::State& prev_state) override;
@@ -88,7 +89,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
 
         void pollingLoop();
         
-        //flat double arrays for ros2_control to point to since RealTimeBuffer do not expose stable pointer for this
+        // Flat arrays for ros2_control to point to, as RealTimeBuffer lacks stable pointers
         std::vector<double> hw_position_commands_;
         std::vector<double> hw_velocity_commands_;
         std::vector<double> hw_effort_commands_;     
@@ -98,7 +99,7 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::vector<double> directions_;
         std::mutex commands_mutex_;
         
-        //flags to check if interfaces are running
+        // Flags to check if interfaces are running
         std::atomic<bool> position_interface_running_{false};
         std::atomic<bool> velocity_interface_running_{false};
         std::atomic<bool> effort_interface_running_{false};

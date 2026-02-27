@@ -45,7 +45,7 @@ class StaticLeftJointStatePublisher(Node):
         msg.name = self.joint_names
         msg.position = self.positions
         msg.velocity = [0.0] * len(self.joint_names)
-        msg.effort = []
+        msg.effort = [0.0] * len(self.joint_names)
         self.publisher_.publish(msg)
 
 

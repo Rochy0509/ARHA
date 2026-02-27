@@ -1,4 +1,5 @@
 #include "arha_hardware_interface/arha_hardware_interface.hpp"
+#include <pthread.h>
 
 namespace arha_hardware_interface{
     
@@ -12,7 +13,7 @@ ArhaHardwareInterface::~ArhaHardwareInterface() {
         polling_thread_.join();
     }
 
-    //safeguard in case driver_ is null so it skip motor disable
+    // Safeguards in case driver_ is null so it skips motor disable
     if (driver_) {
         driver_->enableMotors(false);
     }
@@ -31,7 +32,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
 
     num_joints_ = info.joints.size();
     
-    //for loop to extract information from URDF to set the joints to the limb so it match ARHA_TCP_DRIVER CONFIG
+    // Extracts information from URDF to assign joints to the limb
     for (const auto& joint : info.joints){
         std::string limb = joint.parameters.at("limb_name"); // get what limb is the joint assigned to
         std::string motor_id = joint.parameters.at("motor_id");
@@ -50,11 +51,11 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
         directions_.push_back(dir);
     }
 
-    //for loop to initialize interfaces
+    // Initializes interfaces
     for (const auto& limb : limb_names_){
         auto num_joints = joint_names_[limb].size();
 
-        //state buffer initialization
+        // Initializes state buffers
         position_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
         velocity_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
         effort_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
@@ -69,13 +70,13 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     hw_effort_states_.resize(num_joints_, 0.0);
 
 
-    // connection settings from URDF
+    // Connection settings from URDF
     driver_config_.ip_address = info.hardware_parameters.at("ip_address");
     driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
     driver_config_.socket_timeout_ms = 5000; // Multi-second timeout tolerates heavy ROS 2 FastDDS PointCloud multicasts
-    driver_config_.verbose = true;          // enable verbose to debug byte stream
+    driver_config_.verbose = true;          // Enables verbose to debug byte stream
 
-    // optional zero on startup
+    // Optional zero on startup
     zero_on_startup_ = false;
     if (info.hardware_parameters.count("zero_on_startup")) {
         zero_on_startup_ = (info.hardware_parameters.at("zero_on_startup") == "true");
@@ -87,18 +88,18 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_configure(const rclcpp_lifecycle::State& /*prev_state*/){
     
-    //creating driver_ with config
+    // Creates driver_ with config
     driver_ = std::make_unique<arha_tcp_driver::arhaTCPDriver>(driver_config_);
 
-    //Registering each limb
+    // Registers each limb
     for (const auto& limb : limb_names_){
         driver_->registerLimb({limb, motor_ids_[limb]});
     }
 
-    //starting connection
+    // Starts connection
     auto err = driver_->connect();
 
-    //checking if the stm32 was not reached to start connection
+    // Checks if the stm32 was reached to start connection
     if (err != arha_tcp_driver::DriverError::SUCCESS){
         RCLCPP_FATAL(getLogger(), "Failed to connect to STM32: %s", 
         driver_->getLastErrorMessage().c_str());
@@ -107,7 +108,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_configure(const rcl
     RCLCPP_INFO(getLogger(), "Connected to STM32 at %s:%d", 
         driver_config_.ip_address.c_str(), driver_config_.port);
 
-    // zero encoders if requested
+    // Zeroes encoders if requested
     if (zero_on_startup_) {
         RCLCPP_INFO(getLogger(), "Zeroing motor encoders...");
         for (const auto& limb : limb_names_) {
@@ -128,17 +129,17 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
     RCLCPP_INFO(getLogger(), "Activating ARHA hardware");
 
     auto err = driver_->enableMotors(true);
-    //check for any error
+    // Checks for any error
     if (err != arha_tcp_driver::DriverError::SUCCESS){
         RCLCPP_ERROR(getLogger(), "Failed to enable motors: %s. Continuing anyway to allow debug.",
         driver_->getLastErrorMessage().c_str());
     }
     else {
         RCLCPP_INFO(getLogger(), "Motors Enabled!");
-        // Wait 0.5s for STM32 to power up drivers (matches Python script)
+        // Waits 0.5s for STM32 to power up drivers
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-    //start polling_thread
+    // Starts polling_thread
     stop_polling_ = false;
     if (polling_thread_.joinable()){
         stop_polling_ = true;
@@ -147,12 +148,21 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
     }
     polling_thread_ = std::thread(&ArhaHardwareInterface::pollingLoop, this);
 
+    // Sets Real-Time Priority to prevent Linux CFS from starving the driver
+    struct sched_param param;
+    param.sched_priority = 80; // High real-time priority
+    if (pthread_setschedparam(polling_thread_.native_handle(), SCHED_FIFO, &param) != 0) {
+        RCLCPP_WARN(getLogger(), "Failed to set RT priority. Run with sudo or setcap cap_sys_nice.");
+    } else {
+        RCLCPP_INFO(getLogger(), "Polling thread set to SCHED_FIFO priority 80");
+    }
+
     return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& /*prev_state*/){
     
-    //stopping polling thread
+    // Stops polling thread
     stop_polling_ = true;
     if (polling_thread_.joinable()){
         polling_thread_.join();
@@ -176,7 +186,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_deactivate(const rc
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_shutdown(const rclcpp_lifecycle::State& /*prev_state*/){
 
-    //stopping polling thread
+    // Stops polling thread
     stop_polling_ = true;
     if (polling_thread_.joinable()){
         polling_thread_.join();
@@ -198,7 +208,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_shutdown(const rclc
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_cleanup(const rclcpp_lifecycle::State& /*prev_state*/){
     
-    //checking that driver is disable
+    // Checks that driver is disabled
     if (driver_) {
         driver_->disconnect();
         driver_.reset(); 
@@ -209,7 +219,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_cleanup(const rclcp
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_error(const rclcpp_lifecycle::State& /*prev_state*/){
    
-    //stopping polling thread
+    // Stops polling thread
     stop_polling_ = true;
     if (polling_thread_.joinable()){
         polling_thread_.join();
@@ -339,8 +349,8 @@ hardware_interface::return_type ArhaHardwareInterface::read(
 
 hardware_interface::return_type ArhaHardwareInterface::write(
     const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
-    // Commands are already directly written to hw_*_commands_ by ros2_control.
-    // pollingLoop reads from them directly, so nothing to do here in the RT thread.
+    // Commands are directly written to hw_*_commands_ by ros2_control.
+    // pollingLoop reads from them directly.
     return hardware_interface::return_type::OK;
 }
 
@@ -351,8 +361,20 @@ void ArhaHardwareInterface::pollingLoop() {
     while (!stop_polling_) {
         auto const now = std::chrono::steady_clock::now();
         auto const wakeup_time = now + cycle_time;
+
+        if (!driver_->isConnected()) {
+            static rclcpp::Clock steady_clock(RCL_STEADY_TIME);
+            RCLCPP_WARN_THROTTLE(getLogger(), steady_clock, 2000, "TCP disconnected, attempting reconnect...");
+            if (driver_->reconnect() != arha_tcp_driver::DriverError::SUCCESS) {
+                // Back off for 1 second before trying again so we don't spam the network
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                continue;
+            }
+            RCLCPP_INFO(getLogger(), "TCP Reconnected successfully.");
+            // Specifically does NOT auto-zero encoders here for safety against sagging.
+        }
         
-        // Log continuously to debug MoveIt trajectory vs State mismatch
+        // Logs continuously to debug MoveIt trajectory vs State mismatch
         bool do_log = true; 
         size_t index = 0;
 
@@ -392,9 +414,16 @@ void ArhaHardwareInterface::pollingLoop() {
                         RCLCPP_INFO(getLogger(), "%s", s.c_str());
                     }
                     auto set_err = driver_->setPositions(limb, cmds);
-                    if (set_err != arha_tcp_driver::DriverError::SUCCESS && do_log) {
-                        RCLCPP_ERROR(getLogger(), "setPositions FAILED for %s: %s",
-                            limb.c_str(), driver_->getLastErrorMessage().c_str());
+                    if (set_err != arha_tcp_driver::DriverError::SUCCESS) {
+                        if (do_log) {
+                            RCLCPP_ERROR(getLogger(), "setPositions FAILED for %s: %s",
+                                limb.c_str(), driver_->getLastErrorMessage().c_str());
+                        }
+                        if (set_err == arha_tcp_driver::DriverError::TIMEOUT || 
+                            set_err == arha_tcp_driver::DriverError::RECEIVE_FAILED || 
+                            set_err == arha_tcp_driver::DriverError::SEND_FAILED) {
+                            driver_->disconnect();
+                        }
                     }
                 }
             } else if (velocity_interface_running_) {
@@ -435,9 +464,16 @@ void ArhaHardwareInterface::pollingLoop() {
                 position_state_buffer_[limb].writeFromNonRT(positions);
                 velocity_state_buffer_[limb].writeFromNonRT(velocities);
                 effort_state_buffer_[limb].writeFromNonRT(efforts);
-            } else if (do_log) {
-                RCLCPP_WARN(getLogger(), "getStates failed for %s: %s",
-                    limb.c_str(), driver_->getLastErrorMessage().c_str());
+            } else {
+                if (do_log) {
+                    RCLCPP_WARN(getLogger(), "getStates failed for %s: %s",
+                        limb.c_str(), driver_->getLastErrorMessage().c_str());
+                }
+                if (err == arha_tcp_driver::DriverError::TIMEOUT || 
+                    err == arha_tcp_driver::DriverError::RECEIVE_FAILED || 
+                    err == arha_tcp_driver::DriverError::SEND_FAILED) {
+                    driver_->disconnect();
+                }
             }
 
             index += n;

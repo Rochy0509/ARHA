@@ -429,9 +429,9 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     err = sendPacket(CommandType::SET_ENCODER_ZERO, payload);
     if (err != DriverError::SUCCESS) return err;
 
-    // Firmware takes ~6s (reset + reboot wait), use longer timeout
+    // Firmware takes ~6s to reset and reboot, uses longer timeout
     auto old_timeout = config_.socket_timeout_ms;
-    // Temporarily increase recv timeout for this blocking call
+    // Temporarily increases receive timeout for this blocking call
     struct timeval tv;
     tv.tv_sec = 10;
     tv.tv_usec = 0;
@@ -440,7 +440,7 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     std::vector<uint8_t> response;
     err = receivePacket(response);
 
-    // Restore original timeout
+    // Restores original timeout
     tv.tv_sec = old_timeout / 1000;
     tv.tv_usec = (old_timeout % 1000) * 1000;
     setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -509,7 +509,7 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
 
     uint16_t payload_len = static_cast<uint16_t>(data.size());
 
-    // Build the raw frame
+    // Builds the raw frame
     std::vector<uint8_t> frame;
     frame.reserve(6 + data.size());
 
@@ -520,7 +520,7 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
     frame.insert(frame.end(), data.begin(), data.end());
 
     if (config_.enable_checksum) {
-        // Checksum over everything between START and CHECKSUM
+        // Calculates checksum over everything between START and CHECKSUM
         uint8_t cksum = 0;
         for (size_t i = 1; i < frame.size(); ++i) {
             cksum ^= frame[i];
@@ -531,7 +531,7 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
     frame.push_back(END_BYTE);
 
 
-    // Send the entire frame
+    // Sends the entire frame
     size_t total_sent = 0;
     while (total_sent < frame.size()) {
         ssize_t sent = ::send(socket_fd_,
@@ -578,7 +578,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
 
     data.clear();
 
-    // Helper lambda: receive exactly n bytes into buf
+    // Helper lambda receives exactly n bytes into buf
     auto recv_exact = [this](uint8_t* buf, size_t len) -> DriverError {
         size_t total = 0;
         while (total < len) {
@@ -591,7 +591,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
                 return DriverError::RECEIVE_FAILED;
             }
             if (n == 0) {
-                // Peer closed connection
+                // Indicates peer closed connection
                 connected_.store(false);
                 return DriverError::RECEIVE_FAILED;
             }
@@ -600,7 +600,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
         return DriverError::SUCCESS;
     };
 
-    // Read START_BYTE
+    // Reads START_BYTE
     uint8_t start = 0;
     auto err = recv_exact(&start, 1);
     if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive start byte");
@@ -608,7 +608,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
         return setLastError(DriverError::INVALID_DATA, "Invalid start byte");
     }
 
-    // Read CMD (1 byte) + LEN (2 bytes)
+    // Reads CMD and LEN
     uint8_t header[3];
     err = recv_exact(header, 3);
     if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive header");
@@ -617,14 +617,14 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
                            (static_cast<uint16_t>(header[2]) << 8);
 
 
-    // Read payload
+    // Reads payload
     std::vector<uint8_t> payload(payload_len);
     if (payload_len > 0) {
         err = recv_exact(payload.data(), payload_len);
         if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive payload");
     }
 
-    // Read checksum (if enabled) + END_BYTE
+    // Reads checksum and END_BYTE
     if (config_.enable_checksum) {
         uint8_t trailer[2]; // [checksum, end_byte]
         err = recv_exact(trailer, 2);
@@ -633,7 +633,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
         uint8_t received_cksum = trailer[0];
         uint8_t end_byte = trailer[1];
 
-        // Verify checksum: XOR of cmd + len_lo + len_hi + payload
+        // Verifies checksum via XOR
         uint8_t calc_cksum = 0;
         for (int i = 0; i < 3; ++i) calc_cksum ^= header[i];
         for (auto b : payload) calc_cksum ^= b;
@@ -668,7 +668,7 @@ void arhaTCPDriver::encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value) {
 }
 
 void arhaTCPDriver::encodeMotorValue(std::vector<uint8_t>& buffer, double radians) {
-    // Send as IEEE 754 float32 in radians (STM32 handles rad→deg conversion)
+    // Sends as IEEE 754 float32 in radians
     float f = static_cast<float>(radians);
     uint8_t bytes[4];
     std::memcpy(bytes, &f, 4);
@@ -694,7 +694,7 @@ int32_t arhaTCPDriver::decodeInt32(const std::vector<uint8_t>& buffer, size_t of
 }
 
 double arhaTCPDriver::decodeMotorValue(const std::vector<uint8_t>& buffer, size_t offset) {
-    // Decode IEEE 754 float32 in radians (STM32 already converted to rad)
+    // Decodes IEEE 754 float32 in radians
     float f;
     std::memcpy(&f, buffer.data() + offset, 4);
     return static_cast<double>(f);
@@ -707,7 +707,7 @@ DriverError arhaTCPDriver::createSocket() {
             "socket() failed: " + std::string(std::strerror(errno)));
     }
 
-    // Disable Nagle's algorithm for low-latency motor commands
+    // Disables Nagle's algorithm for low-latency
     int flag = 1;
     setsockopt(socket_fd_, IPPROTO_TCP, TCP_NODELAY,
                reinterpret_cast<char*>(&flag), sizeof(flag));
