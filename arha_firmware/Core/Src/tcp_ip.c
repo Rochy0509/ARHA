@@ -25,7 +25,7 @@
 
 extern IWDG_HandleTypeDef hiwdg1;
 
-/* Map limb name string to index constant */
+/* Maps limb name string to index constant */
 static uint8_t limb_name_to_index(const char *name, uint8_t len) {
     if (len == 8 && memcmp(name, "left_arm", 8) == 0) return LIMB_LEFT_ARM;
     if (len == 9 && memcmp(name, "right_arm", 9) == 0) return LIMB_RIGHT_ARM;
@@ -55,7 +55,7 @@ static void reader_cleanup(NetReader_t *r) {
     if (r->buf) { netbuf_delete(r->buf); r->buf = NULL; }
 }
 
-/* Read exactly 'count' bytes. Returns false on disconnect/timeout. */
+/* Reads exactly 'count' bytes. Returns false on disconnect/timeout. */
 static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
     uint16_t filled = 0;
     while (filled < count) {
@@ -82,14 +82,14 @@ static bool reader_read_byte(NetReader_t *r, uint8_t *out) {
 
 /* ─── Protocol encoding/decoding ─── */
 
-/* XOR checksum: CMD ^ LEN_LO ^ LEN_HI ^ payload[0..N] */
+/* Computes XOR checksum: CMD ^ LEN_LO ^ LEN_HI ^ payload[0..N] */
 static uint8_t compute_checksum(uint8_t cmd, const uint8_t *payload, uint16_t len) {
     uint8_t cs = cmd ^ (uint8_t)(len & 0xFF) ^ (uint8_t)(len >> 8);
     for (uint16_t i = 0; i < len; i++) cs ^= payload[i];
     return cs;
 }
 
-/* Extract [len(1)][string...] from buffer, resolve to limb index.
+/* Extracts [len(1)][string...] from buffer, resolves to limb index.
  * Returns bytes consumed, or 0 on parse error. */
 static uint16_t parse_limb_name(const uint8_t *buf, uint16_t buf_len,
                                 uint8_t *limb_index) {
@@ -115,7 +115,7 @@ static void write_float(uint8_t *p, float val) {
 
 /* ─── Response framing ─── */
 
-/* Build framed response and send. Static buffer avoids 2KB stack alloc. */
+/* Builds framed response and sends. Static buffer avoids 2KB stack alloc. */
 static err_t send_response(struct netconn *conn, uint8_t cmd,
                            const uint8_t *payload, uint16_t payload_len) {
     static uint8_t frame[4 + PROTO_MAX_PAYLOAD + 2];
@@ -133,14 +133,14 @@ static err_t send_response(struct netconn *conn, uint8_t cmd,
     return netconn_write(conn, frame, frame_len, NETCONN_COPY);
 }
 
-/* Empty ACK — echoes the command ID with zero-length payload */
+/* Sends empty ACK — echoes the command ID with zero-length payload */
 static err_t send_ack(struct netconn *conn, uint8_t cmd) {
     return send_response(conn, cmd, NULL, 0);
 }
 
 /* ─── Command handlers ─── */
 
-/* CMD 0x01/0x02/0x03: Set single motor position/velocity/effort */
+/* CMD 0x01/0x02/0x03: Sets single motor position/velocity/effort */
 static void handle_set_single(uint8_t cmd, const uint8_t *payload, uint16_t len,
                               struct netconn *conn) {
     uint8_t limb;
@@ -161,7 +161,7 @@ static void handle_set_single(uint8_t cmd, const uint8_t *payload, uint16_t len,
     send_ack(conn, cmd);
 }
 
-/* CMD 0x04: Get single motor state */
+/* CMD 0x04: Gets single motor state */
 static void handle_get_single(const uint8_t *payload, uint16_t len,
                                struct netconn *conn) {
     uint8_t limb;
@@ -182,7 +182,7 @@ static void handle_get_single(const uint8_t *payload, uint16_t len,
     send_response(conn, CMD_GET_STATE, resp, 12);
 }
 
-/* CMD 0x14/0x15/0x16: Set limb positions/velocities/efforts */
+/* CMD 0x14/0x15/0x16: Sets limb positions/velocities/efforts */
 static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
                             struct netconn *conn) {
     uint8_t limb;
@@ -203,12 +203,13 @@ static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
             case CMD_SET_LIMB_EFFORTS:    motor_set_effort(limb, motor_id, (double)value);   break;
             default: break;
         }
+        HAL_IWDG_Refresh(&hiwdg1);
     }
     
     send_ack(conn, cmd);
 }
 
-/* CMD 0x17: Get limb motor states */
+/* CMD 0x17: Gets limb motor states */
 static void handle_get_limb(const uint8_t *payload, uint16_t len,
                             struct netconn *conn) {
     uint8_t limb;
@@ -234,17 +235,18 @@ static void handle_get_limb(const uint8_t *payload, uint16_t len,
         write_float(&resp[resp_len + 4],  (float)vel);
         write_float(&resp[resp_len + 8],  (float)eff);
         resp_len += 12;
+        HAL_IWDG_Refresh(&hiwdg1);
     }
     send_response(conn, CMD_GET_LIMB_STATES, resp, resp_len);
 }
 
-/* CMD 0x20: Emergency stop all motors */
+/* CMD 0x20: Emergency stops all motors */
 static void handle_emergency_stop(struct netconn *conn) {
     motor_stop_all();
     send_ack(conn, CMD_EMERGENCY_STOP);
 }
 
-/* CMD 0x21: Emergency stop specific limb motors */
+/* CMD 0x21: Emergency stops specific limb motors */
 static void handle_emergency_stop_limb(const uint8_t *payload, uint16_t len,
                                        struct netconn *conn) {
     uint8_t limb;
@@ -261,13 +263,13 @@ static void handle_emergency_stop_limb(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_EMERGENCY_STOP_LIMB);
 }
 
-/* CMD 0x22: Clear all motor errors */
+/* CMD 0x22: Clears all motor errors */
 static void handle_reset_errors(struct netconn *conn) {
     motor_clear_errors_all();
     send_ack(conn, CMD_RESET_ERRORS);
 }
 
-/* CMD 0x23: Enable/disable all motors */
+/* CMD 0x23: Enables/disables all motors */
 static void handle_enable_motors(const uint8_t *payload, uint16_t len,
                                  struct netconn *conn) {
     if (len < 1) { send_ack(conn, CMD_ENABLE_MOTORS); return; }
@@ -275,7 +277,7 @@ static void handle_enable_motors(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_ENABLE_MOTORS);
 }
 
-/* CMD 0x24: Enable/disable specific limb motors */
+/* CMD 0x24: Enables/disables specific limb motors */
 static void handle_enable_limb_motors(const uint8_t *payload, uint16_t len,
                                       struct netconn *conn) {
     uint8_t limb;
@@ -293,7 +295,7 @@ static void handle_enable_limb_motors(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_ENABLE_LIMB_MOTORS);
 }
 
-/* CMD 0x30: Set current motor positions as encoder zero */
+/* CMD 0x30: Sets current motor positions as encoder zero */
 static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
                                      struct netconn *conn) {
     uint8_t limb;
@@ -324,7 +326,7 @@ static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
                              uint16_t len, struct netconn *conn) {
-    /* GREEN: toggle on every TCP command received */
+    /* GREEN: toggles on every TCP command received */
     HAL_GPIO_TogglePin(LED_GREEN_Port, LED_GREEN_Pin);
 
     switch (cmd) {
@@ -384,7 +386,7 @@ static void tcp_handle_client(struct netconn *conn) {
 
     netconn_set_recvtimeout(conn, TCP_RECV_TIMEOUT_MS);
 
-    /* Disable Nagle for low-latency command responses */
+    /* Disables Nagle for low-latency command responses */
     struct tcp_pcb *pcb = conn->pcb.tcp;
     if (pcb) tcp_nagle_disable(pcb);
 
@@ -392,7 +394,7 @@ static void tcp_handle_client(struct netconn *conn) {
         uint8_t byte;
         HAL_IWDG_Refresh(&hiwdg1);
 
-        /* Sync: scan for start byte */
+        /* Sync: scans for start byte */
         if (!reader_read_byte(&reader, &byte)) break;
         if (byte != PROTO_START_BYTE) continue;
 
@@ -407,7 +409,7 @@ static void tcp_handle_client(struct netconn *conn) {
         if (payload_len > 0)
             if (!reader_read(&reader, payload_buf, payload_len)) break;
 
-        /* Checksum verify */
+        /* Verifies checksum */
         uint8_t received_cs;
         if (!reader_read_byte(&reader, &received_cs)) break;
         if (received_cs != compute_checksum(cmd, payload_buf, payload_len)) continue;
@@ -432,7 +434,7 @@ static void tcp_server_task(void *pvParameters) {
     struct netconn *listener, *client;
     err_t err;
 
-    /* Allow LwIP stack to fully initialize */
+    /* Allows LwIP stack to fully initialize */
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     motor_control_init();
@@ -451,12 +453,9 @@ static void tcp_server_task(void *pvParameters) {
     netconn_listen_with_backlog(listener, 1);
     HAL_GPIO_WritePin(LED_GREEN_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 
-    // 500ms unblock interval so we can pet the watchdog
-    netconn_set_recvtimeout(listener, 500);
-
+    // Accept blocks indefinitely; watchdog is fed by StartDefaultTask
     while (1) {
         err = netconn_accept(listener, &client);
-        HAL_IWDG_Refresh(&hiwdg1);
         
         if (err == ERR_OK) {
             HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);

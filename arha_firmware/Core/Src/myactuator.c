@@ -3,6 +3,7 @@
 #include "main.h"  // For LED pins
 #include "cmsis_os.h"
 
+extern IWDG_HandleTypeDef hiwdg1;
 
 void sendCANPacket(uint8_t motor_id, uint8_t* data){
     FDCAN_TxHeaderTypeDef TxHeader;
@@ -17,22 +18,16 @@ void sendCANPacket(uint8_t motor_id, uint8_t* data){
     TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     TxHeader.MessageMarker = 0;
 
-    // I wait up to 50ms for a free TX hardware mailbox.
-    uint32_t timeout = 500000;
-    while (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) == 0 && timeout > 0) {
-        timeout--;
-    }
-
-    if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
-        uint32_t retry = 500000;
-        while (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, data) != HAL_OK && retry > 0) {
-            retry--;
+    // Retries sending up to 5 times with a 1ms RTOS yield
+    for (int retries = 0; retries < 5; retries++) {
+        if (HAL_FDCAN_GetTxFifoFreeLevel(&hfdcan1) > 0) {
+            if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, data) == HAL_OK) {
+                return; // Success
+            }
         }
-        if (retry == 0) {
-            // Drop packet quietly if hardware is permanently wedged.
-        }
-    } else {
-        // Drop packet quietly if TX queue is completely full.
+        // If buffer is full or hardware busy, yields to RTOS / LwIP / Watchdog
+        HAL_IWDG_Refresh(&hiwdg1);
+        osDelay(1);
     }
 }
 

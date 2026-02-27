@@ -131,12 +131,12 @@ int main(void)
   MX_IWDG1_Init();
   /* USER CODE BEGIN 2 */
 
-   // Initialize FDCAN driver
+   // Initializes FDCAN driver
   if (FDCAN_Driver_init() != HAL_OK) {
       Error_Handler();
   }
 
-  // Start FDCAN peripheral
+  // Starts FDCAN peripheral
   if (FDCAN_Driver_Start() != HAL_OK) {
       Error_Handler();
   }
@@ -512,14 +512,19 @@ void StartDefaultTask(void *argument)
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
 
-  /* User Setup: Wait for motors to boot */
-  osDelay(2000); 
+  /* User Setup: Waits for motors to boot */
+  for (int i = 0; i < 20; i++) {
+      osDelay(100);
+      HAL_IWDG_Refresh(&hiwdg1);
+  }
+  
   HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
 
-  /* 1. Set current positions as ZERO for motors 1 through 6 */
+  /* 1. Sets current positions as ZERO for motors 1 through 6 */
   uint32_t arm_motors[6] = {1, 2, 3, 4, 5, 6};
   motor_set_encoder_zero(LIMB_RIGHT_ARM, arm_motors, 6);
   osDelay(100);
+  HAL_IWDG_Refresh(&hiwdg1);
 
   /* 2. Hardware test sequence disabled for TCP validation. */
   // for (uint32_t m = 1; m <= 6; m++) {
@@ -535,7 +540,8 @@ void StartDefaultTask(void *argument)
 
   for(;;)
   {
-    osDelay(1);
+    osDelay(100);
+    HAL_IWDG_Refresh(&hiwdg1);
   }
   /* USER CODE END 5 */
 }

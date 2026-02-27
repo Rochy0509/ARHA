@@ -76,7 +76,7 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
                     rx_head = next_head;
                 }
             } else {
-                // I break instantly on HAL_ERROR to avoid an infinite ISR deadlock.
+                // Breaks instantly on HAL_ERROR to avoid an infinite ISR deadlock.
                 break;
             }
         }
@@ -101,7 +101,7 @@ void HAL_FDCAN_ErrorCallback(FDCAN_HandleTypeDef *hfdcan) {
 
 void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *hfdcan, uint32_t ErrorStatusITs) {
     if (hfdcan == &hfdcan1) {
-        // I only tear down if bus is OFF. Restarting on WARNING wipes TX FIFO.
+        // Only tears down if bus is OFF. Restarting on WARNING wipes TX FIFO.
         if (ErrorStatusITs & FDCAN_IT_BUS_OFF) {
             HAL_FDCAN_Stop(hfdcan);
             HAL_FDCAN_Start(hfdcan);
