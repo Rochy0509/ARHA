@@ -50,6 +50,8 @@ DMA_HandleTypeDef hdma_cordic_wr;
 DMA_HandleTypeDef hdma_cordic_rd;
 
 FDCAN_HandleTypeDef hfdcan1;
+FDCAN_HandleTypeDef hfdcan2;
+FDCAN_HandleTypeDef hfdcan3;
 
 FMAC_HandleTypeDef hfmac;
 DMA_HandleTypeDef hdma_fmac_rd;
@@ -58,6 +60,11 @@ DMA_HandleTypeDef hdma_fmac_wr;
 IWDG_HandleTypeDef hiwdg1;
 
 UART_HandleTypeDef huart3;
+UART_HandleTypeDef huart6;
+DMA_HandleTypeDef hdma_usart3_rx;
+DMA_HandleTypeDef hdma_usart3_tx;
+DMA_HandleTypeDef hdma_usart6_rx;
+DMA_HandleTypeDef hdma_usart6_tx;
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -80,6 +87,9 @@ static void MX_FDCAN1_Init(void);
 static void MX_FMAC_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_IWDG1_Init(void);
+static void MX_FDCAN2_Init(void);
+static void MX_FDCAN3_Init(void);
+static void MX_USART6_UART_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -129,6 +139,9 @@ int main(void)
   MX_FMAC_Init();
   MX_USART3_UART_Init();
   MX_IWDG1_Init();
+  MX_FDCAN2_Init();
+  MX_FDCAN3_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 
    // Initializes FDCAN driver
@@ -138,6 +151,20 @@ int main(void)
 
   // Starts FDCAN peripheral
   if (FDCAN_Driver_Start() != HAL_OK) {
+      Error_Handler();
+  }
+
+  if (FDCAN2_Driver_Init() != HAL_OK) {
+      Error_Handler();
+  }
+  if (FDCAN2_Driver_Start() != HAL_OK) {
+      Error_Handler();
+  }
+
+  if (FDCAN3_Driver_Init() != HAL_OK) {
+      Error_Handler();
+  }
+  if (FDCAN3_Driver_Start() != HAL_OK) {
       Error_Handler();
   }
 
@@ -330,6 +357,112 @@ static void MX_FDCAN1_Init(void)
 }
 
 /**
+  * @brief FDCAN2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_FDCAN2_Init(void)
+{
+
+  /* USER CODE BEGIN FDCAN2_Init 0 */
+
+  /* USER CODE END FDCAN2_Init 0 */
+
+  /* USER CODE BEGIN FDCAN2_Init 1 */
+
+  /* USER CODE END FDCAN2_Init 1 */
+  hfdcan2.Instance = FDCAN2;
+  hfdcan2.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+  hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan2.Init.AutoRetransmission = ENABLE;
+  hfdcan2.Init.TransmitPause = DISABLE;
+  hfdcan2.Init.ProtocolException = DISABLE;
+  hfdcan2.Init.NominalPrescaler = 10;
+  hfdcan2.Init.NominalSyncJumpWidth = 1;
+  hfdcan2.Init.NominalTimeSeg1 = 10;
+  hfdcan2.Init.NominalTimeSeg2 = 2;
+  hfdcan2.Init.DataPrescaler = 1;
+  hfdcan2.Init.DataSyncJumpWidth = 1;
+  hfdcan2.Init.DataTimeSeg1 = 1;
+  hfdcan2.Init.DataTimeSeg2 = 1;
+  hfdcan2.Init.MessageRAMOffset = 170;
+  hfdcan2.Init.StdFiltersNbr = 1;
+  hfdcan2.Init.ExtFiltersNbr = 0;
+  hfdcan2.Init.RxFifo0ElmtsNbr = 8;
+  hfdcan2.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.RxFifo1ElmtsNbr = 0;
+  hfdcan2.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.RxBuffersNbr = 0;
+  hfdcan2.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
+  hfdcan2.Init.TxEventsNbr = 0;
+  hfdcan2.Init.TxBuffersNbr = 0;
+  hfdcan2.Init.TxFifoQueueElmtsNbr = 32;
+  hfdcan2.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+  hfdcan2.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
+  if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN FDCAN2_Init 2 */
+
+  /* USER CODE END FDCAN2_Init 2 */
+
+}
+
+/**
+  * @brief FDCAN3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_FDCAN3_Init(void)
+{
+
+  /* USER CODE BEGIN FDCAN3_Init 0 */
+
+  /* USER CODE END FDCAN3_Init 0 */
+
+  /* USER CODE BEGIN FDCAN3_Init 1 */
+
+  /* USER CODE END FDCAN3_Init 1 */
+  hfdcan3.Instance = FDCAN3;
+  hfdcan3.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
+  hfdcan3.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan3.Init.AutoRetransmission = ENABLE;
+  hfdcan3.Init.TransmitPause = DISABLE;
+  hfdcan3.Init.ProtocolException = DISABLE;
+  hfdcan3.Init.NominalPrescaler = 10;
+  hfdcan3.Init.NominalSyncJumpWidth = 1;
+  hfdcan3.Init.NominalTimeSeg1 = 10;
+  hfdcan3.Init.NominalTimeSeg2 = 2;
+  hfdcan3.Init.DataPrescaler = 1;
+  hfdcan3.Init.DataSyncJumpWidth = 1;
+  hfdcan3.Init.DataTimeSeg1 = 1;
+  hfdcan3.Init.DataTimeSeg2 = 1;
+  hfdcan3.Init.MessageRAMOffset = 340;
+  hfdcan3.Init.StdFiltersNbr = 1;
+  hfdcan3.Init.ExtFiltersNbr = 0;
+  hfdcan3.Init.RxFifo0ElmtsNbr = 8;
+  hfdcan3.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan3.Init.RxFifo1ElmtsNbr = 0;
+  hfdcan3.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
+  hfdcan3.Init.RxBuffersNbr = 0;
+  hfdcan3.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
+  hfdcan3.Init.TxEventsNbr = 0;
+  hfdcan3.Init.TxBuffersNbr = 0;
+  hfdcan3.Init.TxFifoQueueElmtsNbr = 32;
+  hfdcan3.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
+  hfdcan3.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
+  if (HAL_FDCAN_Init(&hfdcan3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN FDCAN3_Init 2 */
+
+  /* USER CODE END FDCAN3_Init 2 */
+
+}
+
+/**
   * @brief FMAC Initialization Function
   * @param None
   * @retval None
@@ -400,7 +533,7 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 1 */
   huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
+  huart3.Init.BaudRate = 1000000;
   huart3.Init.WordLength = UART_WORDLENGTH_8B;
   huart3.Init.StopBits = UART_STOPBITS_1;
   huart3.Init.Parity = UART_PARITY_NONE;
@@ -410,7 +543,7 @@ static void MX_USART3_UART_Init(void)
   huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart3.Init.ClockPrescaler = UART_PRESCALER_DIV1;
   huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart3) != HAL_OK)
+  if (HAL_HalfDuplex_Init(&huart3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -429,6 +562,54 @@ static void MX_USART3_UART_Init(void)
   /* USER CODE BEGIN USART3_Init 2 */
 
   /* USER CODE END USART3_Init 2 */
+
+}
+
+/**
+  * @brief USART6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART6_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART6_Init 0 */
+
+  /* USER CODE END USART6_Init 0 */
+
+  /* USER CODE BEGIN USART6_Init 1 */
+
+  /* USER CODE END USART6_Init 1 */
+  huart6.Instance = USART6;
+  huart6.Init.BaudRate = 1000000;
+  huart6.Init.WordLength = UART_WORDLENGTH_8B;
+  huart6.Init.StopBits = UART_STOPBITS_1;
+  huart6.Init.Parity = UART_PARITY_NONE;
+  huart6.Init.Mode = UART_MODE_TX_RX;
+  huart6.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart6.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart6.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart6.Init.ClockPrescaler = UART_PRESCALER_DIV1;
+  huart6.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_HalfDuplex_Init(&huart6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetTxFifoThreshold(&huart6, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_SetRxFifoThreshold(&huart6, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_UARTEx_DisableFifoMode(&huart6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART6_Init 2 */
+
+  /* USER CODE END USART6_Init 2 */
 
 }
 
@@ -454,6 +635,21 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
+  /* DMA1_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+  /* DMA1_Stream7_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
+  /* DMAMUX1_OVR_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMAMUX1_OVR_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMAMUX1_OVR_IRQn);
 
 }
 
@@ -470,6 +666,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();

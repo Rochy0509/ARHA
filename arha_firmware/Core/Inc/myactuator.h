@@ -84,196 +84,38 @@ typedef enum {
     COUNTER_CLOCKWISE = 0x01
 } SpinDirection;
 
-// --- Global Variables//FDCAN Handle
 extern FDCAN_HandleTypeDef hfdcan1;
+extern FDCAN_HandleTypeDef hfdcan2;
+extern FDCAN_HandleTypeDef hfdcan3;
 
-/**
- * @brief Read the PID parameters of the current, speed, position as float data.
- * @param motor_id ID of the motor (1-6)
- * @param pid_index Index of the parameter to read, look at PID_INDEX_ENUM
- */
+void sendCANPacket(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, uint8_t* data);
 
-void MYACTUATOR_READ_PID(uint8_t motor_id,  PID_PARAM_INDEX pid_index);
-
-/**
- * @brief Write the PID parameters of the current, speed, position as float data.
- * @param motor_id ID of the motor (1-6)
- * @param pid_index Index of the parameter to read, look at  PID_PARAM_INDEX
- * @param value the float value to be write to RAM.
- */
-
-void MYACTUATOR_WRITE_PID_TO_RAM(uint8_t motor_id, PID_PARAM_INDEX pid_index, float value);
-
-/**
- * @brief Write the PID parameters of the current, speed, position as float data.
- * @param motor_id ID of the motor (1-6)
- * @param pid_index Index of the parameter to read, look at  PID_PARAM_INDEX
- * @param value the float value to be write to ROM.
- */
-
-void MYACTUATOR_WRITE_PID_TO_ROM(uint8_t motor_id, PID_PARAM_INDEX pid_index, float value);
-
-/**
- * @brief Read acceleration/deceleration for position and speed planning.
- * @param motor_id ID of the motor (1-6)
- * @param pid_index Index of the acceleration/deceleration parameter to read, look at  ACCEL_INDEX
- */
-
-void MYACTUATOR_READ_ACCEL(uint8_t motor_id, ACCEL_INDEX accel_index);
-
-/**
- * @brief Write acceleration/deceleration for position and speed planning to RAM and ROM.
- * @param motor_id ID of the motor (1-6)
- * @param pid_index Index of the acceleration/deceleration parameter to read, look at  ACCEL_INDEX
- * @param value The value to write
- */
-
-void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(uint8_t motor_id, ACCEL_INDEX accel_index, uint32_t accel_value);
-
-/**
- * @brief Sends a command to read the multi-turn encoder position data.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MULTI_ENC_POS(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read the multi-turn encoder's original (raw) position data.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MULTI_ENC_ORIGINAL_POS(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read the multi-turn encoder's currently stored zero offset value.
- * @param motor_id The ID of the target motor (1-32).
- */
-void MYACTUATOR_READ_MULTI_ENC_ZERO_OFFSET(uint8_t motor_id);
-
-/**
- * @brief Writes a specific multi-turn encoder value to ROM to serve as the motor's new zero position.
- * @param motor_id The ID of the target motor (1-6).
- * @param value The specific encoder value (as an integer) to set as the zero offset.
- * @note The motor must be restarted for the new zero point to take effect.
- */
-void MYACTUATOR_WRITE_ENC_MULTI_TO_ROM_AS_MOTOR_ZERO(uint8_t motor_id, int32_t enc_offset);
-
-/**
- * @brief Sets the motor's current multi-turn encoder position as the new zero offset, saving it to ROM.
- * @param motor_id The ID of the target motor (1-6).
- * @note The motor must be restarted for the new zero point to take effect.
- */
-void MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read single-turn encoder data (position, raw position, and offset).
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_SINGLE_ENC(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read the multi-turn absolute angle of the motor output shaft.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MULTI_ENC_ANGLE(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read the single-turn angle of the motor output shaft (0-359.99 degrees).
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_SINGLE_ENC_ANGLE(uint8_t motor_id);
-
-/**
- * @brief Reads motor status 1, which includes temperature, voltage, and error flags.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MOTOR_STATUS_1(uint8_t motor_id);
-
-/**
- * @brief Reads motor status 2, which includes temperature, torque current, speed, and encoder position.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MOTOR_STATUS_2(uint8_t motor_id);
-
-/**
- * @brief Reads motor status 3, which includes temperature and phase A/B/C current data.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_MOTOR_STATUS_3(uint8_t motor_id);
-
-/**
- * @brief Turns off the motor output and clears its running state.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_MOTOR_SHUTDOWN(uint8_t motor_id);
-
-/**
- * @brief Stops the motor's motion but keeps it in a closed-loop mode.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_MOTOR_STOP(uint8_t motor_id);
-
-/**
- * @brief Controls the motor using torque closed-loop control.
- * @param motor_id The ID of the target motor (1-6).
- * @param torque_value The target torque current. Unit: Amperes (A).
- */
-void MYACTUATOR_TORQUE_CL_CONTROL(uint8_t motor_id, int16_t torque_value);
-
-/**
- * @brief Controls the motor using speed closed-loop control.
- * @param motor_id The ID of the target motor (1-6).
- * @param speed_value The target speed of the motor output shaft. Unit: degrees per second (dps).
- */
-void MYACTUATOR_SPEED_CL_CONTROL(uint8_t motor_id, int32_t speed_value);
-
-/**
- * @brief Controls the motor's absolute multi-turn position.
- * @param motor_id The ID of the target motor (1-6).
- * @param speed_limit The maximum speed for the move. Unit: dps.
- * @param pos The target absolute angle. Unit: degrees.
- */
-void MYACTUATOR_ABS_POS_CL_CONTROL(uint8_t motor_id, int16_t speed_limit, float pos);
-
-/**
- * @brief Controls the motor's single-turn position (0-359.99 degrees).
- * @param motor_id The ID of the target motor (1-6).
- * @param rotation The desired direction of rotation.
- * @param speed_limit The maximum speed for the move. Unit: dps.
- * @param position The target angle within a single turn. Unit: degrees (0-359.99).
- */
-void MYACTUATOR_SINGLE_POS_CONTROL(uint8_t motor_id, SpinDirection direction, uint16_t speed_limit, uint16_t position);
-
-/**
- * @brief Controls the motor's position relative to its current position (incremental move).
- * @param motor_id The ID of the target motor (1-6).
- * @param speed_limit The maximum speed for the move. Unit: dps.
- * @param pos The incremental angle to move. Unit: degrees.
- */
-void MYACTUATOR_INC_POS_CL_CONTROL(uint8_t motor_id, uint16_t speed_limit, int32_t pos);
-
-/**
- * @brief Sends a command to get the system's current operating mode (current, speed, or position loop).
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_SYS_OP_MODE(uint8_t motor_id);
-
-/**
- * @brief Sends a command to reset the motor.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_RESET_MOTOR(uint8_t motor_id);
-
-/**
- * @brief Sends a command to read the system's total runtime since the last reset.
- * @param motor_id The ID of the target motor (1-6).
- */
-void MYACTUATOR_READ_SYS_RUNTIME(uint8_t motor_id);
-
-/**
- * @brief Sets the communication baud rate for the CAN bus.
- * @param motor_id The ID of the target motor (1-6).
- * @param baud The desired baud rate from the BAUD_RATE_INDEX enum.
- * @note This value is saved to ROM and takes effect on the next power cycle.
- */
-void MYACTUATOR_SET_BAUD_RATE(uint8_t motor_id, BAUD_RATE_INDEX baud);
+void MYACTUATOR_READ_PID(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, PID_PARAM_INDEX pid_index);
+void MYACTUATOR_WRITE_PID_TO_RAM(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, PID_PARAM_INDEX pid_index, float value);
+void MYACTUATOR_WRITE_PID_TO_ROM(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, PID_PARAM_INDEX pid_index, float value);
+void MYACTUATOR_READ_ACCEL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, ACCEL_INDEX accel_index);
+void MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, ACCEL_INDEX accel_index, uint32_t accel_value);
+void MYACTUATOR_READ_MULTI_ENC_POS(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MULTI_ENC_ORIGINAL_POS(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MULTI_ENC_ZERO_OFFSET(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_WRITE_ENC_MULTI_TO_ROM_AS_MOTOR_ZERO(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, int32_t enc_offset);
+void MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_SINGLE_ENC(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MULTI_ENC_ANGLE(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_SINGLE_ENC_ANGLE(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MOTOR_STATUS_1(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MOTOR_STATUS_2(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_MOTOR_STATUS_3(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_MOTOR_SHUTDOWN(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_MOTOR_STOP(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_TORQUE_CL_CONTROL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, int16_t torque_value);
+void MYACTUATOR_SPEED_CL_CONTROL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, int32_t speed_value);
+void MYACTUATOR_ABS_POS_CL_CONTROL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, int16_t speed_limit, float pos);
+void MYACTUATOR_SINGLE_POS_CONTROL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, SpinDirection direction, uint16_t speed_limit, uint16_t position);
+void MYACTUATOR_INC_POS_CL_CONTROL(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, uint16_t speed_limit, int32_t pos);
+void MYACTUATOR_READ_SYS_OP_MODE(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_RESET_MOTOR(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_READ_SYS_RUNTIME(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id);
+void MYACTUATOR_SET_BAUD_RATE(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, BAUD_RATE_INDEX baud);
 
 #endif /* MYACTUATOR_H_ */

@@ -41,12 +41,33 @@ static double get_torque_constant(uint8_t limb, uint32_t motor_id) {
 
 #define CAN_RESPONSE_TIMEOUT_MS 50
 
-static void drain_can_queue(void) {
-    FDCAN_RxMessage_t discard;
-    while (FDCAN_Driver_GetMessage(&discard)) { /* drain */ }
+/* ─── Limb → FDCAN bus routing ─── */
+
+static FDCAN_HandleTypeDef* get_fdcan_for_limb(uint8_t limb) {
+    switch (limb) {
+        case LIMB_LEFT_ARM:  return &hfdcan2;
+        case LIMB_RIGHT_ARM: return &hfdcan1;
+        case LIMB_NECK:      return &hfdcan3;
+        default:             return &hfdcan1;
+    }
 }
 
+typedef bool (*GetMessageFn)(FDCAN_RxMessage_t *msg);
 
+static GetMessageFn get_rx_fn_for_limb(uint8_t limb) {
+    switch (limb) {
+        case LIMB_LEFT_ARM:  return FDCAN2_Driver_GetMessage;
+        case LIMB_RIGHT_ARM: return FDCAN_Driver_GetMessage;
+        case LIMB_NECK:      return FDCAN3_Driver_GetMessage;
+        default:             return FDCAN_Driver_GetMessage;
+    }
+}
+
+static void drain_can_queue_for_limb(uint8_t limb) {
+    FDCAN_RxMessage_t discard;
+    GetMessageFn get_msg = get_rx_fn_for_limb(limb);
+    while (get_msg(&discard)) { /* drain */ }
+}
 
 static int32_t rads_to_mya_vel(double rad_s) {
     double dps = rad_s * RAD_TO_DEG;
@@ -68,7 +89,7 @@ void motor_control_init(void) {
 void motor_enable(uint8_t limb, uint32_t motor_id, bool enable) {
     if (enable) {
     } else {
-        MYACTUATOR_MOTOR_SHUTDOWN(motor_id);
+        MYACTUATOR_MOTOR_SHUTDOWN(get_fdcan_for_limb(limb), motor_id);
     }
 }
 
@@ -81,7 +102,7 @@ void motor_enable_all(bool enable) {
 }
 
 void motor_stop(uint8_t limb, uint32_t motor_id) {
-    MYACTUATOR_MOTOR_STOP(motor_id);
+    MYACTUATOR_MOTOR_STOP(get_fdcan_for_limb(limb), motor_id);
 }
 
 void motor_stop_all(void) {
@@ -93,7 +114,7 @@ void motor_stop_all(void) {
 }
 
 void motor_clear_errors(uint8_t limb, uint32_t motor_id) {
-    MYACTUATOR_RESET_MOTOR(motor_id);
+    MYACTUATOR_RESET_MOTOR(get_fdcan_for_limb(limb), motor_id);
 }
 
 void motor_clear_errors_all(void) {
@@ -105,6 +126,8 @@ void motor_clear_errors_all(void) {
 }
 
 void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad) {
+    FDCAN_HandleTypeDef *hfdcan = get_fdcan_for_limb(limb);
+    GetMessageFn get_msg = get_rx_fn_for_limb(limb);
     float deg = (float)(position_rad * RAD_TO_DEG);
     
     // Sends position in degrees; MYACTUATOR_ABS_POS_CL_CONTROL scales to LSB internally
@@ -112,14 +135,14 @@ void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad) {
     uint8_t retries = 1;
     bool success = false;
     while (retries > 0 && !success) {
-        drain_can_queue();
-        MYACTUATOR_ABS_POS_CL_CONTROL(motor_id, (int16_t)DEFAULT_SPEED_LIMIT_DPS, deg);
+        drain_can_queue_for_limb(limb);
+        MYACTUATOR_ABS_POS_CL_CONTROL(hfdcan, motor_id, (int16_t)DEFAULT_SPEED_LIMIT_DPS, deg);
 
         // 1ms timeout blocks the RTOS minimally if a packet drops.
         uint32_t start = HAL_GetTick();
         FDCAN_RxMessage_t msg;
         while ((HAL_GetTick() - start) < 1) {
-            if (FDCAN_Driver_GetMessage(&msg)) {
+            if (get_msg(&msg)) {
                 if (msg.motor_id == motor_id && msg.command == 0xA4) {
                     success = true;
                     break;
@@ -131,18 +154,20 @@ void motor_set_position(uint8_t limb, uint32_t motor_id, double position_rad) {
 }
 
 void motor_set_velocity(uint8_t limb, uint32_t motor_id, double velocity_rad_s) {
+    FDCAN_HandleTypeDef *hfdcan = get_fdcan_for_limb(limb);
+    GetMessageFn get_msg = get_rx_fn_for_limb(limb);
     int32_t dps = rads_to_mya_vel(velocity_rad_s);
     
     uint8_t retries = 1;
     bool success = false;
     while (retries > 0 && !success) {
-        drain_can_queue();
-        MYACTUATOR_SPEED_CL_CONTROL(motor_id, dps);
+        drain_can_queue_for_limb(limb);
+        MYACTUATOR_SPEED_CL_CONTROL(hfdcan, motor_id, dps);
 
         uint32_t start = HAL_GetTick();
         FDCAN_RxMessage_t msg;
         while ((HAL_GetTick() - start) < 1) {
-            if (FDCAN_Driver_GetMessage(&msg)) {
+            if (get_msg(&msg)) {
                 if (msg.motor_id == motor_id && msg.command == 0xA2) {
                     success = true;
                     break;
@@ -154,18 +179,20 @@ void motor_set_velocity(uint8_t limb, uint32_t motor_id, double velocity_rad_s) 
 }
 
 void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort) {
+    FDCAN_HandleTypeDef *hfdcan = get_fdcan_for_limb(limb);
+    GetMessageFn get_msg = get_rx_fn_for_limb(limb);
     int16_t current = effort_to_mya_current(effort);
     
     uint8_t retries = 1;
     bool success = false;
     while (retries > 0 && !success) {
-        drain_can_queue();
-        MYACTUATOR_TORQUE_CL_CONTROL(motor_id, current);
+        drain_can_queue_for_limb(limb);
+        MYACTUATOR_TORQUE_CL_CONTROL(hfdcan, motor_id, current);
 
         uint32_t start = HAL_GetTick();
         FDCAN_RxMessage_t msg;
         while ((HAL_GetTick() - start) < 1) {
-            if (FDCAN_Driver_GetMessage(&msg)) {
+            if (get_msg(&msg)) {
                 if (msg.motor_id == motor_id && msg.command == 0xA1) {
                     success = true;
                     break;
@@ -179,21 +206,23 @@ void motor_set_effort(uint8_t limb, uint32_t motor_id, double effort) {
 // Requests 0x9C for vitals and 0x92 for the absolute multi-turn angle.
 bool motor_get_state(uint8_t limb_index, uint32_t motor_id,
                      double *pos, double *vel, double *eff, double *temp) {
+    FDCAN_HandleTypeDef *hfdcan = get_fdcan_for_limb(limb_index);
+    GetMessageFn get_msg = get_rx_fn_for_limb(limb_index);
     FDCAN_RxMessage_t msg;
     uint32_t start_tick;
     bool got_9c = false;
     bool got_92 = false;
 
-    drain_can_queue();
+    drain_can_queue_for_limb(limb_index);
 
     // Requests both packets immediately so the motor can prepare the second while we read the first
-    MYACTUATOR_READ_MOTOR_STATUS_2(motor_id);
-    MYACTUATOR_READ_MULTI_ENC_ANGLE(motor_id);
+    MYACTUATOR_READ_MOTOR_STATUS_2(hfdcan, motor_id);
+    MYACTUATOR_READ_MULTI_ENC_ANGLE(hfdcan, motor_id);
 
     // Waits a combined maximum of 10ms for both responses
     start_tick = HAL_GetTick();
     while ((HAL_GetTick() - start_tick) < 10) {
-        if (FDCAN_Driver_GetMessage(&msg)) {
+        if (get_msg(&msg)) {
             if (msg.motor_id == motor_id) {
                 if (msg.command == 0x9C) {
                     if (temp) *temp = (double)(int8_t)msg.data[1];
@@ -231,15 +260,17 @@ bool motor_set_encoder_zero(uint8_t limb, const uint32_t *motor_ids, uint8_t num
     #define MOTOR_REBOOT_MS    5000
     #define MAX_ZERO_ATTEMPTS  5
 
+    FDCAN_HandleTypeDef *hfdcan = get_fdcan_for_limb(limb);
+
     for (uint8_t attempt = 0; attempt < MAX_ZERO_ATTEMPTS; attempt++) {
-        drain_can_queue();
+        drain_can_queue_for_limb(limb);
         for (uint8_t i = 0; i < num_motors; i++) {
-            MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(motor_ids[i]);
+            MYACTUATOR_WRITE_CURRENT_MULTI_POS_ENC_TO_ROM_AS_MOTOR_ZERO(hfdcan, motor_ids[i]);
             osDelay(100);
         }
 
         for (uint8_t i = 0; i < num_motors; i++) {
-            MYACTUATOR_RESET_MOTOR(motor_ids[i]);
+            MYACTUATOR_RESET_MOTOR(hfdcan, motor_ids[i]);
             osDelay(100);
             HAL_IWDG_Refresh(&hiwdg1);
         }
