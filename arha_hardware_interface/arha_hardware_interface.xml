@@ -1,9 +1,0 @@
-<library path="arha_hardware_interface">
-  <class name="arha_hardware_interface/ArhaHardwareInterface"
-         type="arha_hardware_interface::ArhaHardwareInterface"
-         base_class_type="hardware_interface::SystemInterface">
-    <description>
-      ROS2, ARHA hardware interface using TCP communication to STM32
-    </description>
-  </class>
-</library>

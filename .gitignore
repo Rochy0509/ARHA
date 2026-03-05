@@ -1,2 +1,30 @@
-.vscode
-arha_hardware_interface/.antigravity
+# VS Code
+.vscode/browse.vc.db
+.vscode/*.db
+.vscode/browse.vc.db-*
+.vscode/ipch/
+
+# STM32 Build artifacts
+Debug/
+Release/
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.su
+*.cyclo
+
+# Object files
+*.o
+*.obj
+
+# Dependency files
+*.d
+
+# Generated files
+*.ioc.bak
+
+# System files
+.DS_Store
+Thumbs.db

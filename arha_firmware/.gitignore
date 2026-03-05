@@ -1,0 +1,30 @@
+# VS Code
+.vscode/browse.vc.db
+.vscode/*.db
+.vscode/browse.vc.db-*
+.vscode/ipch/
+
+# STM32CubeIDE / Eclipse
+.settings/
+.cproject
+.project
+
+# Build artifacts
+Debug/
+Release/
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.su
+*.cyclo
+*.d
+*.o
+
+# Generated files
+*.ioc.bak
+
+# System files
+.DS_Store
+Thumbs.db
