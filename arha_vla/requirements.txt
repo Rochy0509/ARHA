@@ -1,0 +1,21 @@
+# PyTorch
+torch==2.6.0+cu124
+torchvision==0.21.0+cu124
+torchaudio==2.6.0+cu124
+
+# Hugging Face ecosystem
+transformers>=4.45.0
+peft>=0.13.0
+bitsandbytes>=0.44.0
+accelerate>=1.0.0
+huggingface_hub>=0.25.0
+
+# LeRobot
+lerobot>=0.1.0
+
+# Core dependencies
+numpy>=1.21.0
+pyyaml>=5.4.0
+tqdm>=4.50.0
+matplotlib>=3.5.0
+Pillow>=9.0.0

@@ -1,0 +1,27 @@
+# Model
+model_id: "Qwen/Qwen3.5-2B"
+chunk_size: 8
+load_in_4bit: true
+
+# Data
+# Using absolute path to avoid DataLoader worker crashes
+data_root: "/home/grasp/Documents/ARHA/arha_vla/data"
+max_samples: 200000
+batch_size: 2          
+
+# Training
+num_epochs: 3
+lr: 0.0001             
+weight_decay: 0.01
+grad_accum: 16         
+max_grad_norm: 1.0     
+
+# Logging + saving
+# Absolute paths for logs and checkpoints inside arha_vla
+log_every: 10          
+save_every: 500        
+early_stop_patience: 10 
+early_stop_window: 50   
+early_stop_min_steps: 2000
+checkpoint_dir: "/home/grasp/Documents/ARHA/arha_vla/checkpoints/stage1"
+log_path: "/home/grasp/Documents/ARHA/arha_vla/logs/train_stage1.json"

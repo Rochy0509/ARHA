@@ -1,0 +1,9 @@
+name: arha_vla
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - ffmpeg
+  - tqdm
+  - matplotlib
+prefix: /home/grasp/anaconda3/envs/arha_vla
