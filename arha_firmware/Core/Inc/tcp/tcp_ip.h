@@ -51,6 +51,13 @@ typedef enum {
     CMD_ENABLE_LIMB_MOTORS  = 0x24,
     CMD_SET_ENCODER_ZERO    = 0x30,
 
+    /* Gripper commands (0x40–0x44) */
+    CMD_GRIPPER_PING        = 0x40,
+    CMD_GRIPPER_OPEN        = 0x41,
+    CMD_GRIPPER_CLOSE       = 0x42,
+    CMD_GRIPPER_MOVE_TO     = 0x43,
+    CMD_GRIPPER_GET_STATUS  = 0x44,
+
     CMD_PING                = 0xFF,
 } ProtocolCmd_t;
 

@@ -22,7 +22,7 @@
  * This differs from the SCS series (high byte first).
  */
 
-#include "sts3215_gripper.h"
+#include "motor/STS3215.h"
 #include <string.h>
 
 /* ============================================================
@@ -183,6 +183,27 @@ STS_Status STS_EPROMLock(uint8_t id)
  * Private Motion Helper
  * ============================================================ */
 
+static STS_Status STS_RegWriteData(uint8_t id, uint8_t address,
+                                   const uint8_t *data, uint8_t len)
+{
+    uint8_t buf[64];
+    buf[0] = address;
+    memcpy(&buf[1], data, len);
+    STS_SendPacket(id, STS_REG_WRITE, buf, (uint8_t)(len + 1));
+
+    if (id == STS_BROADCAST_ID) return STS_OK;   /* no response expected */
+    uint8_t dummy = 0;
+    return STS_ReceivePacket(id, NULL, &dummy);
+}
+
+static STS_Status STS_Action(uint8_t id)
+{
+    STS_SendPacket(id, STS_ACTION, NULL, 0);
+    if (id == STS_BROADCAST_ID) return STS_OK;
+    uint8_t dummy = 0;
+    return STS_ReceivePacket(id, NULL, &dummy);
+}
+
 /**
  * @brief Write goal position and goal speed together in one transaction.
  *
@@ -197,7 +218,15 @@ static STS_Status _move(uint8_t id, uint16_t position, uint16_t speed)
     _pack16(&data[0], position);
     _pack16(&data[2], 0);        /* time field unused in mode 0 */
     _pack16(&data[4], speed);
-    return STS_WriteData(id, STS_ADDR_GOAL_POSITION, data, 6);
+    
+    /* 1. Register the write command. The servo ACKs this BEFORE moving, 
+     *    which protects the delicate UART line from startup current EMI. */
+    STS_Status st = STS_RegWriteData(id, STS_ADDR_GOAL_POSITION, data, 6);
+    if (st != STS_OK) return st;
+
+    /* 2. Broadcast Action to trigger the buffered motion. 
+     *    Broadcasts do not require an ACK, so we don't care about noise. */
+    return STS_Action(STS_BROADCAST_ID);
 }
 
 /* ============================================================
@@ -212,42 +241,22 @@ STS_Status GRIPPER_Init(uint8_t torque_pct)
     st = GRIPPER_Ping();
     if (st != STS_OK) return st;
 
-    /* 2. Unlock EPROM to write configuration */
-    st = STS_EPROMUnlock(GRIPPER_SERVO_ID);
-    if (st != STS_OK) return st;
+    /* 2. (Removed) We NEVER write EPROM on every boot. 
+     *    Writing EPROM halts the servo's CPU and causes flash wear.
+     *    Consecutive EPROM writes without long delays will crash the servo.
+     *    We assume the servo is in its factory default position mode. */
 
-    /* 3. Set operating mode to 0 (position servo) */
-    uint8_t mode = STS_MODE_POSITION;
-    st = STS_WriteData(GRIPPER_SERVO_ID, STS_ADDR_OPERATING_MODE, &mode, 1);
-    if (st != STS_OK) { STS_EPROMLock(GRIPPER_SERVO_ID); return st; }
-
-    /* 4. Set angle limits to the full mechanical range of the gripper.
-     *    Setting both to 0 enables continuous motor mode — we do NOT want
-     *    that, so set explicit limits that match GRIPPER_POS_OPEN / CLOSED. */
-    uint8_t lim[2];
-    _pack16(lim, GRIPPER_POS_OPEN);
-    st = STS_WriteData(GRIPPER_SERVO_ID, STS_ADDR_MIN_ANGLE, lim, 2);
-    if (st != STS_OK) { STS_EPROMLock(GRIPPER_SERVO_ID); return st; }
-
-    _pack16(lim, GRIPPER_POS_CLOSED);
-    st = STS_WriteData(GRIPPER_SERVO_ID, STS_ADDR_MAX_ANGLE, lim, 2);
-    if (st != STS_OK) { STS_EPROMLock(GRIPPER_SERVO_ID); return st; }
-
-    /* 5. Set max torque in EPROM as a safety ceiling */
-    uint8_t max_t[2];
-    _pack16(max_t, 600);   /* 60% absolute ceiling regardless of runtime limit */
-    st = STS_WriteData(GRIPPER_SERVO_ID, STS_ADDR_MAX_TORQUE, max_t, 2);
-    if (st != STS_OK) { STS_EPROMLock(GRIPPER_SERVO_ID); return st; }
-
-    /* 6. Re-lock EPROM */
-    st = STS_EPROMLock(GRIPPER_SERVO_ID);
-    if (st != STS_OK) return st;
-
-    /* 7. Apply the runtime torque limit (SRAM — no unlock needed) */
+    /* 3. Apply the runtime torque limit (SRAM — no unlock needed) */
     st = GRIPPER_SetTorque(torque_pct);
     if (st != STS_OK) return st;
 
-    /* 8. Enable torque output */
+    /* 4. Apply a soft acceleration profile to prevent 12V inrush current 
+     *    alarms (Overload Protection) when starting from a dead stop. */
+    uint8_t acc = 50; 
+    st = STS_WriteData(GRIPPER_SERVO_ID, STS_ADDR_ACCELERATION, &acc, 1);
+    if (st != STS_OK) return st;
+
+    /* 5. Enable torque output */
     st = GRIPPER_EnableTorque();
     return st;
 }

@@ -1,9 +1,3 @@
-/*
- * motor_control.h
- *
- * Motor abstraction layer for ARHA Robot.
- * Handles unit conversion (Rad <-> Deg) and hardware abstraction.
- */
 
 #ifndef MOTOR_CONTROL_H
 #define MOTOR_CONTROL_H

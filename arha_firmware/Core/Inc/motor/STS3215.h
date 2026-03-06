@@ -30,7 +30,7 @@
  * @brief Fully open position (encoder counts, 0–4095).
  * 2048 = 180° neutral.  Adjust to match your mechanical range.
  */
-#define GRIPPER_POS_OPEN          1024   /* ~90°  */
+#define GRIPPER_POS_OPEN          2813   /* User calibrated open point */
 
 /**
  * @brief Fully closed / maximum squeeze position.
@@ -38,7 +38,7 @@
  * Set slightly past the hard-close point so it always stalls on
  * the object rather than on the mechanical end-stop.
  */
-#define GRIPPER_POS_CLOSED        3072   /* ~270° */
+#define GRIPPER_POS_CLOSED        3300   /* High enough to guarantee mechanical stall */
 
 /**
  * @brief Default closing speed (encoder steps per second).
@@ -55,7 +55,7 @@
  *   60% ≈ 18 kg·cm  — firm grip
  * The driver converts this percentage to the 0–1000 register scale.
  */
-#define GRIPPER_DEFAULT_TORQUE_PCT  30    /* 30% = ~9 kg·cm @ 12 V */
+#define GRIPPER_DEFAULT_TORQUE_PCT  50    /* 50% to overcome friction */
 
 /* ============================================================
  * STS3215 Register Map (SMS1.0, low byte first)

@@ -12,6 +12,7 @@
 
 #include "tcp/tcp_ip.h"
 #include "motor/motor_control.h"
+#include "motor/gripper_control.h"
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/sys.h"
@@ -53,6 +54,8 @@ static void reader_cleanup(NetReader_t *r) {
 
 /* Read exactly 'count' bytes. Returns false on disconnect/timeout. */
 static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
+    extern IWDG_HandleTypeDef hiwdg1; /* Refresh watchdog while waiting */
+    
     uint16_t filled = 0;
     while (filled < count) {
         if (r->pos >= r->len) {
@@ -62,6 +65,9 @@ static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
             netbuf_data(r->buf, (void **)&r->data, &r->len);
             r->pos = 0;
         }
+        
+        HAL_IWDG_Refresh(&hiwdg1); /* Do not let the board reset during idle */
+        
         uint16_t avail = r->len - r->pos;
         uint16_t need  = count - filled;
         uint16_t chunk = (avail < need) ? avail : need;
@@ -316,6 +322,71 @@ static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
     send_response(conn, CMD_SET_ENCODER_ZERO, &resp, 1);
 }
 
+/* ─── Gripper command handlers ─── */
+
+/* CMD 0x40: Ping the gripper motor */
+static void handle_gripper_ping(struct netconn *conn) {
+    STS_Status st = gripper_ping();
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_PING, &resp, 1);
+}
+
+/* CMD 0x41: Open the gripper */
+static void handle_gripper_open(const uint8_t *payload, uint16_t len,
+                                struct netconn *conn) {
+    uint16_t speed = 0;
+    if (len >= 2) speed = (uint16_t)(payload[0] | (payload[1] << 8));
+    STS_Status st = gripper_open(speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_OPEN, &resp, 1);
+}
+
+/* CMD 0x42: Close the gripper */
+static void handle_gripper_close(const uint8_t *payload, uint16_t len,
+                                 struct netconn *conn) {
+    uint16_t speed = 0;
+    if (len >= 2) speed = (uint16_t)(payload[0] | (payload[1] << 8));
+    STS_Status st = gripper_close(speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_CLOSE, &resp, 1);
+}
+
+/* CMD 0x43: Move gripper to a specific position */
+static void handle_gripper_move_to(const uint8_t *payload, uint16_t len,
+                                   struct netconn *conn) {
+    if (len < 2) { send_ack(conn, CMD_GRIPPER_MOVE_TO); return; }
+    uint16_t position = (uint16_t)(payload[0] | (payload[1] << 8));
+    uint16_t speed = 0;
+    if (len >= 4) speed = (uint16_t)(payload[2] | (payload[3] << 8));
+    STS_Status st = gripper_move_to(position, speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_MOVE_TO, &resp, 1);
+}
+
+/* CMD 0x44: Read gripper status (position, speed, load, voltage, temp) */
+static void handle_gripper_get_status(struct netconn *conn) {
+    GripperStatus gs;
+    STS_Status st = gripper_read_status(&gs);
+    if (st != STS_OK) {
+        uint8_t resp = 0;
+        send_response(conn, CMD_GRIPPER_GET_STATUS, &resp, 1);
+        return;
+    }
+    /* Pack: [ok(1)][pos_lo][pos_hi][speed_lo][speed_hi]
+     *       [load_lo][load_hi][voltage(1)][temp(1)] = 9 bytes */
+    uint8_t resp[9];
+    resp[0] = 1;
+    resp[1] = (uint8_t)(gs.position & 0xFF);
+    resp[2] = (uint8_t)(gs.position >> 8);
+    resp[3] = (uint8_t)((uint16_t)gs.speed & 0xFF);
+    resp[4] = (uint8_t)((uint16_t)gs.speed >> 8);
+    resp[5] = (uint8_t)(gs.load & 0xFF);
+    resp[6] = (uint8_t)(gs.load >> 8);
+    resp[7] = (uint8_t)(gs.voltage * 10.0f);  /* back to 0.1V units */
+    resp[8] = gs.temp_c;
+    send_response(conn, CMD_GRIPPER_GET_STATUS, resp, 9);
+}
+
 /* ─── Command dispatch ─── */
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
@@ -350,6 +421,18 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
             handle_enable_limb_motors(payload, len, conn); break;
         case CMD_SET_ENCODER_ZERO:
             handle_set_encoder_zero(payload, len, conn);   break;
+
+        /* Gripper commands (0x40–0x44) */
+        case CMD_GRIPPER_PING:
+            handle_gripper_ping(conn);                   break;
+        case CMD_GRIPPER_OPEN:
+            handle_gripper_open(payload, len, conn);     break;
+        case CMD_GRIPPER_CLOSE:
+            handle_gripper_close(payload, len, conn);    break;
+        case CMD_GRIPPER_MOVE_TO:
+            handle_gripper_move_to(payload, len, conn);  break;
+        case CMD_GRIPPER_GET_STATUS:
+            handle_gripper_get_status(conn);             break;
 
         /* Keepalive */
         case CMD_PING:
