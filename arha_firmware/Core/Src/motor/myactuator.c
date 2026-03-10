@@ -18,16 +18,31 @@ void sendCANPacket(FDCAN_HandleTypeDef *hfdcan, uint8_t motor_id, uint8_t* data)
     TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
     TxHeader.MessageMarker = 0;
 
-    // Retries sending up to 5 times with a 1ms RTOS yield
-    for (int retries = 0; retries < 5; retries++) {
+    // Wait for up to 5ms for the TX FIFO to have space.
+    // Tight polling is necessary here because osDelay(1) context 
+    // switches can cause us to miss the hardware window and drop packets.
+    // 5ms is plenty for a 1Mbps bus (each frame is ~130us).
+    uint32_t start = HAL_GetTick();
+    while ((HAL_GetTick() - start) < 5) {
         if (HAL_FDCAN_GetTxFifoFreeLevel(hfdcan) > 0) {
+            
+            // Throttle right arm (FDCAN1) to prevent arbitration drops.
+            // MUST be done before queueing, otherwise the hardware FIFO 
+            // just blasts them all out back-to-back anyway.
+            extern FDCAN_HandleTypeDef hfdcan1;
+            if (hfdcan == &hfdcan1) {
+                // Static variable to track the last transmission time across calls
+                static uint32_t last_tx_tick = 0;
+                while ((HAL_GetTick() - last_tx_tick) < 3) {
+                    HAL_IWDG_Refresh(&hiwdg1);
+                }
+                last_tx_tick = HAL_GetTick();
+            }
+
             if (HAL_FDCAN_AddMessageToTxFifoQ(hfdcan, &TxHeader, data) == HAL_OK) {
                 return;
             }
         }
-        // If buffer is full or hardware busy, yields to RTOS / LwIP / Watchdog
-        HAL_IWDG_Refresh(&hiwdg1);
-        osDelay(1);
     }
 }
 

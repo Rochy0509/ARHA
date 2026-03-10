@@ -12,6 +12,8 @@
 
 #include "tcp/tcp_ip.h"
 #include "motor/motor_control.h"
+#include "motor/fdcan.h"
+#include "motor/myactuator.h"
 #include "motor/gripper_control.h"
 #include "main.h"
 #include "lwip/opt.h"
@@ -61,6 +63,10 @@ static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
         if (r->pos >= r->len) {
             if (r->buf) { netbuf_delete(r->buf); r->buf = NULL; }
             err_t err = netconn_recv(r->conn, &r->buf);
+            if (err == ERR_TIMEOUT) {
+                HAL_IWDG_Refresh(&hiwdg1);
+                continue;
+            }
             if (err != ERR_OK || r->buf == NULL) return false;
             netbuf_data(r->buf, (void **)&r->data, &r->len);
             r->pos = 0;
@@ -387,6 +393,103 @@ static void handle_gripper_get_status(struct netconn *conn) {
     send_response(conn, CMD_GRIPPER_GET_STATUS, resp, 9);
 }
 
+/* CMD 0x31: Read acceleration parameters for a limb.
+ * Payload: [limb_name][num_joints(1)][motor_id(4)]...
+ * Response: [motor_id(4) + accel(4)] per joint */
+static void handle_read_accel(const uint8_t *payload, uint16_t len,
+                              struct netconn *conn) {
+    uint8_t limb;
+    uint16_t off = parse_limb_name(payload, len, &limb);
+    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) {
+        send_ack(conn, CMD_READ_ACCEL); return;
+    }
+
+    uint8_t num_joints = payload[off++];
+    if (off + num_joints * 4 > len || num_joints > 6) {
+        send_ack(conn, CMD_READ_ACCEL); return;
+    }
+
+    FDCAN_HandleTypeDef *hfdcan = NULL;
+    bool (*get_msg)(FDCAN_RxMessage_t *) = NULL;
+    switch (limb) {
+        case LIMB_LEFT_ARM:  hfdcan = &hfdcan2; get_msg = FDCAN2_Driver_GetMessage; break;
+        case LIMB_RIGHT_ARM: hfdcan = &hfdcan1; get_msg = FDCAN_Driver_GetMessage;  break;
+        case LIMB_NECK:      hfdcan = &hfdcan3; get_msg = FDCAN3_Driver_GetMessage; break;
+        default:             hfdcan = &hfdcan1; get_msg = FDCAN_Driver_GetMessage;  break;
+    }
+
+    uint8_t resp[6 * 8];
+    uint16_t roff = 0;
+
+    for (uint8_t i = 0; i < num_joints; i++) {
+        uint32_t motor_id = read_u32(&payload[off]);
+        off += 4;
+
+        /* Drain stale CAN messages */
+        FDCAN_RxMessage_t discard;
+        while (get_msg(&discard)) {}
+
+        MYACTUATOR_READ_ACCEL(hfdcan, motor_id, POS_PLAN_ACCEL);
+
+        uint32_t accel_val = 0;
+        uint32_t start = HAL_GetTick();
+        while ((HAL_GetTick() - start) < 50) {
+            FDCAN_RxMessage_t msg;
+            if (get_msg(&msg)) {
+                if (msg.motor_id == motor_id && msg.command == 0x42) {
+                    memcpy(&accel_val, &msg.data[4], 4);
+                    break;
+                }
+            }
+        }
+
+        resp[roff++] = motor_id & 0xFF;
+        resp[roff++] = (motor_id >> 8) & 0xFF;
+        resp[roff++] = (motor_id >> 16) & 0xFF;
+        resp[roff++] = (motor_id >> 24) & 0xFF;
+        resp[roff++] = accel_val & 0xFF;
+        resp[roff++] = (accel_val >> 8) & 0xFF;
+        resp[roff++] = (accel_val >> 16) & 0xFF;
+        resp[roff++] = (accel_val >> 24) & 0xFF;
+    }
+
+    send_response(conn, CMD_READ_ACCEL, resp, roff);
+}
+
+/* CMD 0x32: Write acceleration to ROM+RAM for a limb.
+ * Payload: [limb_name][num_joints(1)][motor_id(4) + accel(4)]... */
+static void handle_write_accel(const uint8_t *payload, uint16_t len,
+                               struct netconn *conn) {
+    uint8_t limb;
+    uint16_t off = parse_limb_name(payload, len, &limb);
+    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) {
+        send_ack(conn, CMD_WRITE_ACCEL); return;
+    }
+
+    uint8_t num_joints = payload[off++];
+    if (off + num_joints * 8 > len || num_joints > 6) {
+        send_ack(conn, CMD_WRITE_ACCEL); return;
+    }
+
+    FDCAN_HandleTypeDef *hfdcan = NULL;
+    switch (limb) {
+        case LIMB_LEFT_ARM:  hfdcan = &hfdcan2; break;
+        case LIMB_RIGHT_ARM: hfdcan = &hfdcan1; break;
+        case LIMB_NECK:      hfdcan = &hfdcan3; break;
+        default:             hfdcan = &hfdcan1; break;
+    }
+
+    for (uint8_t i = 0; i < num_joints; i++) {
+        uint32_t motor_id = read_u32(&payload[off]);
+        uint32_t accel_val = read_u32(&payload[off + 4]);
+        off += 8;
+        MYACTUATOR_WRITE_ACCEL_TO_ROM_RAM(hfdcan, motor_id, POS_PLAN_ACCEL, accel_val);
+        osDelay(10);
+    }
+
+    send_ack(conn, CMD_WRITE_ACCEL);
+}
+
 /* ─── Command dispatch ─── */
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
@@ -421,6 +524,10 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
             handle_enable_limb_motors(payload, len, conn); break;
         case CMD_SET_ENCODER_ZERO:
             handle_set_encoder_zero(payload, len, conn);   break;
+        case CMD_READ_ACCEL:
+            handle_read_accel(payload, len, conn);         break;
+        case CMD_WRITE_ACCEL:
+            handle_write_accel(payload, len, conn);        break;
 
         /* Gripper commands (0x40–0x44) */
         case CMD_GRIPPER_PING:

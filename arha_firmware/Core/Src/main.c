@@ -390,7 +390,7 @@ static void MX_FDCAN2_Init(void)
   hfdcan2.Init.DataSyncJumpWidth = 1;
   hfdcan2.Init.DataTimeSeg1 = 1;
   hfdcan2.Init.DataTimeSeg2 = 1;
-  hfdcan2.Init.MessageRAMOffset = 0;
+  hfdcan2.Init.MessageRAMOffset = 720;
   hfdcan2.Init.StdFiltersNbr = 1;
   hfdcan2.Init.ExtFiltersNbr = 0;
   hfdcan2.Init.RxFifo0ElmtsNbr = 8;
@@ -443,7 +443,7 @@ static void MX_FDCAN3_Init(void)
   hfdcan3.Init.DataSyncJumpWidth = 1;
   hfdcan3.Init.DataTimeSeg1 = 1;
   hfdcan3.Init.DataTimeSeg2 = 1;
-  hfdcan3.Init.MessageRAMOffset = 0;
+  hfdcan3.Init.MessageRAMOffset = 1440;
   hfdcan3.Init.StdFiltersNbr = 1;
   hfdcan3.Init.ExtFiltersNbr = 0;
   hfdcan3.Init.RxFifo0ElmtsNbr = 8;
@@ -766,26 +766,9 @@ void StartDefaultTask(void *argument)
   }
   
   HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
-
-  /* 1. Sets current positions as ZERO for motors 1 through 6 */
-  /* NOTE: Commented out — MyActuator motors not connected on this board */
-  // uint32_t arm_motors[6] = {1, 2, 3, 4, 5, 6};
-  // motor_set_encoder_zero(LIMB_RIGHT_ARM, arm_motors, 6);
-  // osDelay(100);
-  // HAL_IWDG_Refresh(&hiwdg1);
-
-  /* 2. Hardware test sequence disabled for TCP validation. */
-  // for (uint32_t m = 1; m <= 6; m++) {
-  //     motor_set_position(LIMB_RIGHT_ARM, m, 15.0f * (3.14159265f / 180.0f)); // Move to 15.0°
-  //     osDelay(3000);
-  //     motor_set_position(LIMB_RIGHT_ARM, m, 0.0f); 
-  //     osDelay(3000);
-  // }
-
   HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
 
-  /* 3. Initialise the STS3215 gripper motor */
-  gripper_init();
+  // gripper_init();
 
   tcp_server_init();
 

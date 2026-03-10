@@ -22,9 +22,9 @@
 
 // ── Network config ──
 #define TCP_SERVER_PORT     5000
-#define TCP_TASK_STACK      256
+#define TCP_TASK_STACK      1024
 #define TCP_TASK_PRIORITY   24  // osPriorityNormal
-#define TCP_RECV_TIMEOUT_MS 5000
+#define TCP_RECV_TIMEOUT_MS 500
 
 // ── Robot topology ──
 #include "motor/motor_control.h"
@@ -50,6 +50,8 @@ typedef enum {
     CMD_ENABLE_MOTORS       = 0x23,
     CMD_ENABLE_LIMB_MOTORS  = 0x24,
     CMD_SET_ENCODER_ZERO    = 0x30,
+    CMD_READ_ACCEL          = 0x31,
+    CMD_WRITE_ACCEL         = 0x32,
 
     /* Gripper commands (0x40–0x44) */
     CMD_GRIPPER_PING        = 0x40,
