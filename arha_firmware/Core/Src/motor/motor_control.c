@@ -1,6 +1,6 @@
-#include "motor_control.h"
-#include "myactuator.h"
-#include "fdcan.h"
+#include "motor/motor_control.h"
+#include "motor/myactuator.h"
+#include "motor/fdcan.h"
 #include "main.h" /* For HAL_Delay */
 #include "cmsis_os.h" /* For osDelay */
 #include <math.h>

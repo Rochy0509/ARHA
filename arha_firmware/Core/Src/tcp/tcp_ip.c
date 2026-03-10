@@ -10,10 +10,9 @@
  * Author: Kenneth Martinez
  */
 
-#include "tcp_ip.h"
-#include "motor_control.h"
-#include "myactuator.h"
-#include "fdcan.h"
+#include "tcp/tcp_ip.h"
+#include "motor/motor_control.h"
+#include "motor/gripper_control.h"
 #include "main.h"
 #include "lwip/opt.h"
 #include "lwip/sys.h"
@@ -23,9 +22,7 @@
 #include "task.h"
 #include <string.h>
 
-extern IWDG_HandleTypeDef hiwdg1;
-
-/* Maps limb name string to index constant */
+/* Map limb name string to index constant */
 static uint8_t limb_name_to_index(const char *name, uint8_t len) {
     if (len == 8 && memcmp(name, "left_arm", 8) == 0) return LIMB_LEFT_ARM;
     if (len == 9 && memcmp(name, "right_arm", 9) == 0) return LIMB_RIGHT_ARM;
@@ -55,8 +52,10 @@ static void reader_cleanup(NetReader_t *r) {
     if (r->buf) { netbuf_delete(r->buf); r->buf = NULL; }
 }
 
-/* Reads exactly 'count' bytes. Returns false on disconnect/timeout. */
+/* Read exactly 'count' bytes. Returns false on disconnect/timeout. */
 static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
+    extern IWDG_HandleTypeDef hiwdg1; /* Refresh watchdog while waiting */
+    
     uint16_t filled = 0;
     while (filled < count) {
         if (r->pos >= r->len) {
@@ -66,6 +65,9 @@ static bool reader_read(NetReader_t *r, uint8_t *dst, uint16_t count) {
             netbuf_data(r->buf, (void **)&r->data, &r->len);
             r->pos = 0;
         }
+        
+        HAL_IWDG_Refresh(&hiwdg1); /* Do not let the board reset during idle */
+        
         uint16_t avail = r->len - r->pos;
         uint16_t need  = count - filled;
         uint16_t chunk = (avail < need) ? avail : need;
@@ -82,14 +84,14 @@ static bool reader_read_byte(NetReader_t *r, uint8_t *out) {
 
 /* ─── Protocol encoding/decoding ─── */
 
-/* Computes XOR checksum: CMD ^ LEN_LO ^ LEN_HI ^ payload[0..N] */
+/* XOR checksum: CMD ^ LEN_LO ^ LEN_HI ^ payload[0..N] */
 static uint8_t compute_checksum(uint8_t cmd, const uint8_t *payload, uint16_t len) {
     uint8_t cs = cmd ^ (uint8_t)(len & 0xFF) ^ (uint8_t)(len >> 8);
     for (uint16_t i = 0; i < len; i++) cs ^= payload[i];
     return cs;
 }
 
-/* Extracts [len(1)][string...] from buffer, resolves to limb index.
+/* Extract [len(1)][string...] from buffer, resolve to limb index.
  * Returns bytes consumed, or 0 on parse error. */
 static uint16_t parse_limb_name(const uint8_t *buf, uint16_t buf_len,
                                 uint8_t *limb_index) {
@@ -115,7 +117,7 @@ static void write_float(uint8_t *p, float val) {
 
 /* ─── Response framing ─── */
 
-/* Builds framed response and sends. Static buffer avoids 2KB stack alloc. */
+/* Build framed response and send. Static buffer avoids 2KB stack alloc. */
 static err_t send_response(struct netconn *conn, uint8_t cmd,
                            const uint8_t *payload, uint16_t payload_len) {
     static uint8_t frame[4 + PROTO_MAX_PAYLOAD + 2];
@@ -133,14 +135,14 @@ static err_t send_response(struct netconn *conn, uint8_t cmd,
     return netconn_write(conn, frame, frame_len, NETCONN_COPY);
 }
 
-/* Sends empty ACK — echoes the command ID with zero-length payload */
+/* Empty ACK — echoes the command ID with zero-length payload */
 static err_t send_ack(struct netconn *conn, uint8_t cmd) {
     return send_response(conn, cmd, NULL, 0);
 }
 
 /* ─── Command handlers ─── */
 
-/* CMD 0x01/0x02/0x03: Sets single motor position/velocity/effort */
+/* CMD 0x01/0x02/0x03: Set single motor position/velocity/effort */
 static void handle_set_single(uint8_t cmd, const uint8_t *payload, uint16_t len,
                               struct netconn *conn) {
     uint8_t limb;
@@ -161,7 +163,7 @@ static void handle_set_single(uint8_t cmd, const uint8_t *payload, uint16_t len,
     send_ack(conn, cmd);
 }
 
-/* CMD 0x04: Gets single motor state */
+/* CMD 0x04: Get single motor state */
 static void handle_get_single(const uint8_t *payload, uint16_t len,
                                struct netconn *conn) {
     uint8_t limb;
@@ -182,34 +184,33 @@ static void handle_get_single(const uint8_t *payload, uint16_t len,
     send_response(conn, CMD_GET_STATE, resp, 12);
 }
 
-/* CMD 0x14/0x15/0x16: Sets limb positions/velocities/efforts */
+/* CMD 0x14/0x15/0x16: Set limb positions/velocities/efforts */
 static void handle_set_limb(uint8_t cmd, const uint8_t *payload, uint16_t len,
                             struct netconn *conn) {
     uint8_t limb;
     uint16_t off = parse_limb_name(payload, len, &limb);
-    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) return;
+    if (off == 0 || off + 1 > len || limb == LIMB_UNKNOWN) {
+        send_ack(conn, cmd); return;
+    }
 
     uint8_t num_joints = payload[off++];
-    if (off + num_joints * 8 > len) return;
+    if (off + num_joints * 8 > len) { send_ack(conn, cmd); return; }
 
     for (uint8_t i = 0; i < num_joints; i++) {
         uint32_t motor_id = read_u32(&payload[off]);
         float value = read_float(&payload[off + 4]);
         off += 8;
-
         switch (cmd) {
             case CMD_SET_LIMB_POSITIONS:  motor_set_position(limb, motor_id, (double)value); break;
             case CMD_SET_LIMB_VELOCITIES: motor_set_velocity(limb, motor_id, (double)value); break;
             case CMD_SET_LIMB_EFFORTS:    motor_set_effort(limb, motor_id, (double)value);   break;
             default: break;
         }
-        HAL_IWDG_Refresh(&hiwdg1);
     }
-    
     send_ack(conn, cmd);
 }
 
-/* CMD 0x17: Gets limb motor states */
+/* CMD 0x17: Get limb motor states */
 static void handle_get_limb(const uint8_t *payload, uint16_t len,
                             struct netconn *conn) {
     uint8_t limb;
@@ -235,18 +236,17 @@ static void handle_get_limb(const uint8_t *payload, uint16_t len,
         write_float(&resp[resp_len + 4],  (float)vel);
         write_float(&resp[resp_len + 8],  (float)eff);
         resp_len += 12;
-        HAL_IWDG_Refresh(&hiwdg1);
     }
     send_response(conn, CMD_GET_LIMB_STATES, resp, resp_len);
 }
 
-/* CMD 0x20: Emergency stops all motors */
+/* CMD 0x20: Emergency stop all motors */
 static void handle_emergency_stop(struct netconn *conn) {
     motor_stop_all();
     send_ack(conn, CMD_EMERGENCY_STOP);
 }
 
-/* CMD 0x21: Emergency stops specific limb motors */
+/* CMD 0x21: Emergency stop specific limb motors */
 static void handle_emergency_stop_limb(const uint8_t *payload, uint16_t len,
                                        struct netconn *conn) {
     uint8_t limb;
@@ -263,13 +263,13 @@ static void handle_emergency_stop_limb(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_EMERGENCY_STOP_LIMB);
 }
 
-/* CMD 0x22: Clears all motor errors */
+/* CMD 0x22: Clear all motor errors */
 static void handle_reset_errors(struct netconn *conn) {
     motor_clear_errors_all();
     send_ack(conn, CMD_RESET_ERRORS);
 }
 
-/* CMD 0x23: Enables/disables all motors */
+/* CMD 0x23: Enable/disable all motors */
 static void handle_enable_motors(const uint8_t *payload, uint16_t len,
                                  struct netconn *conn) {
     if (len < 1) { send_ack(conn, CMD_ENABLE_MOTORS); return; }
@@ -277,7 +277,7 @@ static void handle_enable_motors(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_ENABLE_MOTORS);
 }
 
-/* CMD 0x24: Enables/disables specific limb motors */
+/* CMD 0x24: Enable/disable specific limb motors */
 static void handle_enable_limb_motors(const uint8_t *payload, uint16_t len,
                                       struct netconn *conn) {
     uint8_t limb;
@@ -295,7 +295,7 @@ static void handle_enable_limb_motors(const uint8_t *payload, uint16_t len,
     send_ack(conn, CMD_ENABLE_LIMB_MOTORS);
 }
 
-/* CMD 0x30: Sets current motor positions as encoder zero */
+/* CMD 0x30: Set current motor positions as encoder zero */
 static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
                                      struct netconn *conn) {
     uint8_t limb;
@@ -322,19 +322,80 @@ static void handle_set_encoder_zero(const uint8_t *payload, uint16_t len,
     send_response(conn, CMD_SET_ENCODER_ZERO, &resp, 1);
 }
 
+/* ─── Gripper command handlers ─── */
+
+/* CMD 0x40: Ping the gripper motor */
+static void handle_gripper_ping(struct netconn *conn) {
+    STS_Status st = gripper_ping();
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_PING, &resp, 1);
+}
+
+/* CMD 0x41: Open the gripper */
+static void handle_gripper_open(const uint8_t *payload, uint16_t len,
+                                struct netconn *conn) {
+    uint16_t speed = 0;
+    if (len >= 2) speed = (uint16_t)(payload[0] | (payload[1] << 8));
+    STS_Status st = gripper_open(speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_OPEN, &resp, 1);
+}
+
+/* CMD 0x42: Close the gripper */
+static void handle_gripper_close(const uint8_t *payload, uint16_t len,
+                                 struct netconn *conn) {
+    uint16_t speed = 0;
+    if (len >= 2) speed = (uint16_t)(payload[0] | (payload[1] << 8));
+    STS_Status st = gripper_close(speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_CLOSE, &resp, 1);
+}
+
+/* CMD 0x43: Move gripper to a specific position */
+static void handle_gripper_move_to(const uint8_t *payload, uint16_t len,
+                                   struct netconn *conn) {
+    if (len < 2) { send_ack(conn, CMD_GRIPPER_MOVE_TO); return; }
+    uint16_t position = (uint16_t)(payload[0] | (payload[1] << 8));
+    uint16_t speed = 0;
+    if (len >= 4) speed = (uint16_t)(payload[2] | (payload[3] << 8));
+    STS_Status st = gripper_move_to(position, speed);
+    uint8_t resp = (st == STS_OK) ? 1 : 0;
+    send_response(conn, CMD_GRIPPER_MOVE_TO, &resp, 1);
+}
+
+/* CMD 0x44: Read gripper status (position, speed, load, voltage, temp) */
+static void handle_gripper_get_status(struct netconn *conn) {
+    GripperStatus gs;
+    STS_Status st = gripper_read_status(&gs);
+    if (st != STS_OK) {
+        uint8_t resp = 0;
+        send_response(conn, CMD_GRIPPER_GET_STATUS, &resp, 1);
+        return;
+    }
+    /* Pack: [ok(1)][pos_lo][pos_hi][speed_lo][speed_hi]
+     *       [load_lo][load_hi][voltage(1)][temp(1)] = 9 bytes */
+    uint8_t resp[9];
+    resp[0] = 1;
+    resp[1] = (uint8_t)(gs.position & 0xFF);
+    resp[2] = (uint8_t)(gs.position >> 8);
+    resp[3] = (uint8_t)((uint16_t)gs.speed & 0xFF);
+    resp[4] = (uint8_t)((uint16_t)gs.speed >> 8);
+    resp[5] = (uint8_t)(gs.load & 0xFF);
+    resp[6] = (uint8_t)(gs.load >> 8);
+    resp[7] = (uint8_t)(gs.voltage * 10.0f);  /* back to 0.1V units */
+    resp[8] = gs.temp_c;
+    send_response(conn, CMD_GRIPPER_GET_STATUS, resp, 9);
+}
+
 /* ─── Command dispatch ─── */
 
 static void dispatch_command(uint8_t cmd, const uint8_t *payload,
                              uint16_t len, struct netconn *conn) {
-    /* GREEN: toggles on every TCP command received */
-    HAL_GPIO_TogglePin(LED_GREEN_Port, LED_GREEN_Pin);
-
     switch (cmd) {
         /* Single motor commands (0x01–0x04) */
         case CMD_SET_POSITION:
         case CMD_SET_VELOCITY:
         case CMD_SET_EFFORT:
-            HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
             handle_set_single(cmd, payload, len, conn);  break;
         case CMD_GET_STATE:
             handle_get_single(payload, len, conn);       break;
@@ -343,20 +404,16 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
         case CMD_SET_LIMB_POSITIONS:
         case CMD_SET_LIMB_VELOCITIES:
         case CMD_SET_LIMB_EFFORTS:
-            HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
             handle_set_limb(cmd, payload, len, conn);    break;
         case CMD_GET_LIMB_STATES:
             handle_get_limb(payload, len, conn);         break;
 
         /* Safety & control (0x20–0x24) */
         case CMD_EMERGENCY_STOP:
-            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_SET);
             handle_emergency_stop(conn);                 break;
         case CMD_EMERGENCY_STOP_LIMB:
-            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_SET);
             handle_emergency_stop_limb(payload, len, conn); break;
         case CMD_RESET_ERRORS:
-            HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_RESET);
             handle_reset_errors(conn);                   break;
         case CMD_ENABLE_MOTORS:
             handle_enable_motors(payload, len, conn);    break;
@@ -364,6 +421,18 @@ static void dispatch_command(uint8_t cmd, const uint8_t *payload,
             handle_enable_limb_motors(payload, len, conn); break;
         case CMD_SET_ENCODER_ZERO:
             handle_set_encoder_zero(payload, len, conn);   break;
+
+        /* Gripper commands (0x40–0x44) */
+        case CMD_GRIPPER_PING:
+            handle_gripper_ping(conn);                   break;
+        case CMD_GRIPPER_OPEN:
+            handle_gripper_open(payload, len, conn);     break;
+        case CMD_GRIPPER_CLOSE:
+            handle_gripper_close(payload, len, conn);    break;
+        case CMD_GRIPPER_MOVE_TO:
+            handle_gripper_move_to(payload, len, conn);  break;
+        case CMD_GRIPPER_GET_STATUS:
+            handle_gripper_get_status(conn);             break;
 
         /* Keepalive */
         case CMD_PING:
@@ -382,19 +451,16 @@ static void tcp_handle_client(struct netconn *conn) {
     NetReader_t reader;
     reader_init(&reader, conn);
 
-    // Encoder zeroing is now only performed when explicitly requested via CMD_SET_ENCODER_ZERO.
-
     netconn_set_recvtimeout(conn, TCP_RECV_TIMEOUT_MS);
 
-    /* Disables Nagle for low-latency command responses */
+    /* Disable Nagle for low-latency command responses */
     struct tcp_pcb *pcb = conn->pcb.tcp;
     if (pcb) tcp_nagle_disable(pcb);
 
     while (1) {
         uint8_t byte;
-        HAL_IWDG_Refresh(&hiwdg1);
 
-        /* Sync: scans for start byte */
+        /* Sync: scan for start byte */
         if (!reader_read_byte(&reader, &byte)) break;
         if (byte != PROTO_START_BYTE) continue;
 
@@ -409,7 +475,7 @@ static void tcp_handle_client(struct netconn *conn) {
         if (payload_len > 0)
             if (!reader_read(&reader, payload_buf, payload_len)) break;
 
-        /* Verifies checksum */
+        /* Checksum verify */
         uint8_t received_cs;
         if (!reader_read_byte(&reader, &received_cs)) break;
         if (received_cs != compute_checksum(cmd, payload_buf, payload_len)) continue;
@@ -421,10 +487,10 @@ static void tcp_handle_client(struct netconn *conn) {
 
         /* Valid frame — dispatch and toggle activity LED */
         dispatch_command(cmd, payload_buf, payload_len, conn);
+        HAL_GPIO_TogglePin(LED_YELLOW_Port, LED_YELLOW_Pin);
     }
 
     reader_cleanup(&reader);
-    motor_stop_all(); /* EMERGENCY STOP on timeout/disconnect */
 }
 
 /* ─── Server task ─── */
@@ -434,7 +500,7 @@ static void tcp_server_task(void *pvParameters) {
     struct netconn *listener, *client;
     err_t err;
 
-    /* Allows LwIP stack to fully initialize */
+    /* Allow LwIP stack to fully initialize */
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     motor_control_init();
@@ -453,10 +519,8 @@ static void tcp_server_task(void *pvParameters) {
     netconn_listen_with_backlog(listener, 1);
     HAL_GPIO_WritePin(LED_GREEN_Port, LED_GREEN_Pin, GPIO_PIN_SET);
 
-    // Accept blocks indefinitely; watchdog is fed by StartDefaultTask
     while (1) {
         err = netconn_accept(listener, &client);
-        
         if (err == ERR_OK) {
             HAL_GPIO_WritePin(LED_YELLOW_Port, LED_YELLOW_Pin, GPIO_PIN_SET);
             HAL_GPIO_WritePin(LED_RED_Port, LED_RED_Pin, GPIO_PIN_RESET);
