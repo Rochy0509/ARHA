@@ -102,6 +102,18 @@ namespace arha_tcp_driver {
 
             // Calibration
             DriverError setEncoderZero(const std::string& limb_name);
+            DriverError readAccel(const std::string& limb_name,
+                                 std::vector<uint32_t>& accel_values);
+            DriverError writeAccel(const std::string& limb_name,
+                                  const std::vector<uint32_t>& accel_values);
+
+            // Gripper control
+            DriverError gripperPing();
+            DriverError gripperOpen(uint16_t speed = 0);
+            DriverError gripperClose(uint16_t speed = 0);
+            DriverError gripperMoveTo(uint16_t position, uint16_t speed = 0);
+            DriverError gripperGetStatus(uint16_t& position, int16_t& speed, int16_t& load,
+                                         uint8_t& voltage_decivolts, uint8_t& temp_c);
 
             // Status and diagnostics
             std::string getLastErrorMessage() const;
@@ -133,6 +145,16 @@ namespace arha_tcp_driver {
                 ENABLE_MOTORS       = 0x23,
                 ENABLE_LIMB_MOTORS  = 0x24,
                 SET_ENCODER_ZERO    = 0x30,
+                READ_ACCEL          = 0x31,
+                WRITE_ACCEL         = 0x32,
+
+                // Gripper commands
+                GRIPPER_PING        = 0x40,
+                GRIPPER_OPEN        = 0x41,
+                GRIPPER_CLOSE       = 0x42,
+                GRIPPER_MOVE_TO     = 0x43,
+                GRIPPER_GET_STATUS  = 0x44,
+
                 PING                = 0xFF
             };
 

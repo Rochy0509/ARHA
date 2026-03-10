@@ -70,17 +70,19 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     hw_effort_states_.resize(num_joints_, 0.0);
 
 
-    // Connection settings from URDF
-    driver_config_.ip_address = info.hardware_parameters.at("ip_address");
-    driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
-    driver_config_.socket_timeout_ms = 5000; // Multi-second timeout tolerates heavy ROS 2 FastDDS PointCloud multicasts
-    driver_config_.verbose = true;          // Enables verbose to debug byte stream
-
     // Optional zero on startup
     zero_on_startup_ = false;
     if (info.hardware_parameters.count("zero_on_startup")) {
         zero_on_startup_ = (info.hardware_parameters.at("zero_on_startup") == "true");
     }
+
+    // Connection settings from URDF
+    driver_config_.ip_address = info.hardware_parameters.at("ip_address");
+    driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
+    // Multi-second timeout tolerates heavy ROS 2 FastDDS PointCloud multicasts
+    // But zeroing the motors requires an extremely long timeout (up to 45 seconds)
+    driver_config_.socket_timeout_ms = zero_on_startup_ ? 45000 : 5000; 
+    driver_config_.verbose = false;          // Disabled verbose byte stream debugging
 
     stop_polling_ = false;
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -290,11 +292,12 @@ hardware_interface::return_type ArhaHardwareInterface::prepare_command_mode_swit
             }
         }
     }
-    if (!start_interfaces.empty() && start_interfaces.size() != num_joints_ ) {
-        RCLCPP_ERROR(getLogger(), "Expected %zu interfaces for mode switch, got %zu.", num_joints_,
-        start_interfaces.size());
-        return hardware_interface::return_type::ERROR;
-    }
+    // Allow partial activations (e.g. left_arm_controller activating 6 joints, right_arm_controller activating 6)
+    // if (!start_interfaces.empty() && start_interfaces.size() != num_joints_ ) {
+    //     RCLCPP_ERROR(getLogger(), "Expected %zu interfaces for mode switch, got %zu.", num_joints_,
+    //     start_interfaces.size());
+    //     return hardware_interface::return_type::ERROR;
+    // }
 
     return hardware_interface::return_type::OK;
 }
@@ -375,7 +378,7 @@ void ArhaHardwareInterface::pollingLoop() {
         }
         
         // Logs continuously to debug MoveIt trajectory vs State mismatch
-        bool do_log = true; 
+        bool do_log = false; 
         size_t index = 0;
 
         for (const auto& limb : limb_names_) {

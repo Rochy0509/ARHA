@@ -63,4 +63,16 @@ if(BUILD_ARHA_TESTS)
   add_executable(test_sequence test/test_sequence.cpp)
   target_link_libraries(test_sequence PRIVATE ${PROJECT_NAME})
   install(TARGETS test_sequence DESTINATION bin)
+
+  add_executable(test_gripper_tcp test/test_gripper_tcp.cpp)
+  target_link_libraries(test_gripper_tcp PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_gripper_tcp DESTINATION bin)
+
+  add_executable(test_left_arm test/test_left_arm.cpp)
+  target_link_libraries(test_left_arm PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_left_arm DESTINATION bin)
+
+  add_executable(test_both_arms test/test_both_arms.cpp)
+  target_link_libraries(test_both_arms PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_both_arms DESTINATION bin)
 endif()

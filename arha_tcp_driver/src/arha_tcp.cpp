@@ -433,7 +433,7 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     auto old_timeout = config_.socket_timeout_ms;
     // Temporarily increases receive timeout for this blocking call
     struct timeval tv;
-    tv.tv_sec = 10;
+    tv.tv_sec = 45;
     tv.tv_usec = 0;
     setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
@@ -451,6 +451,128 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
         return setLastError(DriverError::INVALID_DATA,
             "Encoder zero failed for limb '" + limb_name + "'");
     }
+    return DriverError::SUCCESS;
+}
+
+// Gripper control
+
+DriverError arhaTCPDriver::readAccel(const std::string& limb_name,
+                                     std::vector<uint32_t>& accel_values) {
+    auto err = validateLimb(limb_name);
+    if (err != DriverError::SUCCESS) return err;
+
+    const auto& limb = limbs_.at(limb_name);
+    std::vector<uint8_t> payload;
+    encodeString(payload, limb_name);
+    encodeUInt8(payload, static_cast<uint8_t>(limb.motor_ids.size()));
+    for (auto id : limb.motor_ids) {
+        encodeUInt32(payload, id);
+    }
+
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    err = sendPacket(CommandType::READ_ACCEL, payload);
+    if (err != DriverError::SUCCESS) return err;
+
+    std::vector<uint8_t> response;
+    err = receivePacket(response);
+    if (err != DriverError::SUCCESS) return err;
+
+    size_t num = limb.motor_ids.size();
+    if (response.size() < num * 8) {
+        return setLastError(DriverError::INVALID_DATA,
+            "Response too short for accel read");
+    }
+
+    accel_values.resize(num);
+    for (size_t i = 0; i < num; ++i) {
+        accel_values[i] = decodeUInt32(response, i * 8 + 4);
+    }
+    return DriverError::SUCCESS;
+}
+
+DriverError arhaTCPDriver::writeAccel(const std::string& limb_name,
+                                      const std::vector<uint32_t>& accel_values) {
+    auto err = validateLimb(limb_name);
+    if (err != DriverError::SUCCESS) return err;
+
+    const auto& limb = limbs_.at(limb_name);
+    if (accel_values.size() != limb.motor_ids.size()) {
+        return setLastError(DriverError::JOINT_COUNT_MISMATCH,
+            "accel_values size mismatch");
+    }
+
+    std::vector<uint8_t> payload;
+    encodeString(payload, limb_name);
+    encodeUInt8(payload, static_cast<uint8_t>(limb.motor_ids.size()));
+    for (size_t i = 0; i < limb.motor_ids.size(); ++i) {
+        encodeUInt32(payload, limb.motor_ids[i]);
+        encodeUInt32(payload, accel_values[i]);
+    }
+
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    return sendAndWaitAck(CommandType::WRITE_ACCEL, payload);
+}
+
+DriverError arhaTCPDriver::gripperPing() {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> empty;
+    return sendAndWaitAck(CommandType::GRIPPER_PING, empty);
+}
+
+DriverError arhaTCPDriver::gripperOpen(uint16_t speed) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(speed & 0xFF);
+    payload.push_back((speed >> 8) & 0xFF);
+    return sendAndWaitAck(CommandType::GRIPPER_OPEN, payload);
+}
+
+DriverError arhaTCPDriver::gripperClose(uint16_t speed) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(speed & 0xFF);
+    payload.push_back((speed >> 8) & 0xFF);
+    return sendAndWaitAck(CommandType::GRIPPER_CLOSE, payload);
+}
+
+DriverError arhaTCPDriver::gripperMoveTo(uint16_t position, uint16_t speed) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(position & 0xFF);
+    payload.push_back((position >> 8) & 0xFF);
+    payload.push_back(speed & 0xFF);
+    payload.push_back((speed >> 8) & 0xFF);
+    return sendAndWaitAck(CommandType::GRIPPER_MOVE_TO, payload);
+}
+
+DriverError arhaTCPDriver::gripperGetStatus(uint16_t& position, int16_t& speed, int16_t& load,
+                                            uint8_t& voltage_decivolts, uint8_t& temp_c) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> empty;
+    auto err = sendPacket(CommandType::GRIPPER_GET_STATUS, empty);
+    if (err != DriverError::SUCCESS) return err;
+
+    std::vector<uint8_t> response;
+    err = receivePacket(response);
+    if (err != DriverError::SUCCESS) return err;
+
+    // Firmare sends 9 bytes: [ok(1)][pos(2)][speed(2)][load(2)][volt(1)][temp(1)]
+    if (response.size() < 9) {
+        return setLastError(DriverError::INVALID_DATA,
+            "Response too short for gripper status: got " +
+            std::to_string(response.size()) + ", expected 9");
+    }
+
+    if (response[0] != 1) {
+        return setLastError(DriverError::INVALID_DATA, "Motor offline or read failed");
+    }
+
+    position          = response[1] | (response[2] << 8);
+    speed             = (int16_t)(response[3] | (response[4] << 8));
+    load              = (int16_t)(response[5] | (response[6] << 8));
+    voltage_decivolts = response[7];
+    temp_c            = response[8];
+
     return DriverError::SUCCESS;
 }
 

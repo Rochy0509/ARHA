@@ -1,19 +1,32 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-    <xacro:macro name="arha_description_ros2_control" params="name initial_positions_file">
+    <xacro:macro name="arha_description_ros2_control" params="name initial_positions_file use_fake_hardware:=true zero_on_startup:=false">
         <xacro:property name="initial_positions" value="${load_yaml(initial_positions_file)['initial_positions']}"/>
 
         <ros2_control name="${name}" type="system">
             <hardware>
-                <!-- By default, set up controllers for simulation. This won't work on real hardware -->
-                <plugin>mock_components/GenericSystem</plugin>
+                <xacro:if value="${use_fake_hardware}">
+                    <plugin>mock_components/GenericSystem</plugin>
+                </xacro:if>
+                <xacro:unless value="${use_fake_hardware}">
+                    <plugin>arha_hardware_interface/ArhaHardwareInterface</plugin>
+                    <param name="ip_address">192.168.197.123</param>
+                    <param name="port">5000</param>
+                    <param name="zero_on_startup">${zero_on_startup}</param>
+                </xacro:unless>
             </hardware>
+
+            <!-- LEFT ARM JOINTS -->
             <joint name="ShoulderLU_joint">
                 <command_interface name="position"/>
                 <state_interface name="position">
                   <param name="initial_value">${initial_positions['ShoulderLU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">1</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ShoulderLD_joint">
                 <command_interface name="position"/>
@@ -21,6 +34,10 @@
                   <param name="initial_value">${initial_positions['ShoulderLD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">2</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ElbowLU_joint">
                 <command_interface name="position"/>
@@ -28,6 +45,10 @@
                   <param name="initial_value">${initial_positions['ElbowLU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">3</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ElbowLD_joint">
                 <command_interface name="position"/>
@@ -35,6 +56,10 @@
                   <param name="initial_value">${initial_positions['ElbowLD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">4</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="WristLU_joint">
                 <command_interface name="position"/>
@@ -42,6 +67,10 @@
                   <param name="initial_value">${initial_positions['WristLU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">5</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="WristLD_joint">
                 <command_interface name="position"/>
@@ -49,13 +78,23 @@
                   <param name="initial_value">${initial_positions['WristLD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">left_arm</param>
+                <param name="motor_id">6</param>
+                <param name="direction">-1</param>
             </joint>
+
+            <!-- RIGHT ARM JOINTS -->
             <joint name="ShoulderRU_joint">
                 <command_interface name="position"/>
                 <state_interface name="position">
                   <param name="initial_value">${initial_positions['ShoulderRU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">1</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ShoulderRD_joint">
                 <command_interface name="position"/>
@@ -63,6 +102,10 @@
                   <param name="initial_value">${initial_positions['ShoulderRD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">2</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ElbowRU_joint">
                 <command_interface name="position"/>
@@ -70,6 +113,10 @@
                   <param name="initial_value">${initial_positions['ElbowRU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">3</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="ElbowRD_joint">
                 <command_interface name="position"/>
@@ -77,6 +124,10 @@
                   <param name="initial_value">${initial_positions['ElbowRD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">4</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="WristRU_joint">
                 <command_interface name="position"/>
@@ -84,6 +135,10 @@
                   <param name="initial_value">${initial_positions['WristRU_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">5</param>
+                <param name="direction">-1</param>
             </joint>
             <joint name="WristRD_joint">
                 <command_interface name="position"/>
@@ -91,6 +146,10 @@
                   <param name="initial_value">${initial_positions['WristRD_joint']}</param>
                 </state_interface>
                 <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_arm</param>
+                <param name="motor_id">6</param>
+                <param name="direction">-1</param>
             </joint>
 
         </ros2_control>
