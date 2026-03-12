@@ -14,6 +14,8 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(arha_tcp_driver REQUIRED)
+find_package(kdl_parser REQUIRED)
+find_package(orocos_kdl REQUIRED)
 
 add_library(${PROJECT_NAME} SHARED
   src/arha_hardware_interface.cpp
@@ -32,6 +34,8 @@ ament_target_dependencies(
   rclcpp
   rclcpp_lifecycle
   realtime_tools
+  kdl_parser
+  orocos_kdl
 )
 
 target_link_libraries(${PROJECT_NAME}

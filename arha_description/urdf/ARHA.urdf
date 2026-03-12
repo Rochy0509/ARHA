@@ -107,10 +107,10 @@
     name="ShoulderLU_link">
     <inertial>
       <origin
-        xyz="0.000633904495236731 0.058299543463125 0.000131520562804743"
+        xyz="0.000215 0.077221 0.000045"
         rpy="0 0 0" />
       <mass
-        value="0.437859352194871" />
+        value="1.36249" />
       <inertia
         ixx="0.000761320903843758"
         ixy="0.00010323291028103"
@@ -168,7 +168,7 @@
         xyz="0.0130996516559233 4.03562806224889E-05 -0.0159486004121393"
         rpy="0 0 0" />
       <mass
-        value="0.121271829639387" />
+        value="0.12" />
       <inertia
         ixx="0.000264584076158386"
         ixy="-1.73910116146315E-07"
@@ -223,10 +223,10 @@
     name="ElbowLU_link">
     <inertial>
       <origin
-        xyz="0.0523700637070466 0.00121630077779727 -0.165628058836482"
+        xyz="0.041987 -0.000042 -0.134259"
         rpy="0 0 0" />
       <mass
-        value="0.435431174027291" />
+        value="1.9519" />
       <inertia
         ixx="0.00116072679569384"
         ixy="8.04355925173392E-06"
@@ -281,10 +281,10 @@
     name="ElbowLD_link">
     <inertial>
       <origin
-        xyz="0.0150145603137214 -0.0141079237505648 -0.053785235661527"
+        xyz="0.028432 -0.007858 -0.098279"
         rpy="0 0 0" />
       <mass
-        value="0.405367875717028" />
+        value="1.05401" />
       <inertia
         ixx="0.00067624701220466"
         ixy="5.55177260579747E-06"
@@ -342,7 +342,7 @@
         xyz="0.00639011818127691 0.000136393365235563 0.0551589170384083"
         rpy="0 0 0" />
       <mass
-        value="0.348222374397224" />
+        value="0.1" />
       <inertia
         ixx="0.000507501720144092"
         ixy="1.11372011938532E-07"
@@ -397,10 +397,10 @@
     name="WristLD_link">
     <inertial>
       <origin
-        xyz="-0.000789165657556684 0.000668276784951023 0.0143918198387223"
+        xyz="-0.000283 0.000240 0.005168"
         rpy="0 0 0" />
       <mass
-        value="0.144157848422193" />
+        value="0.7646" />
       <inertia
         ixx="0.0002107185858156"
         ixy="-6.96875325623027E-07"
@@ -455,10 +455,10 @@
     name="ShoulderRU_link">
     <inertial>
       <origin
-        xyz="0.000633904463091112 0.0632876622043777 0.000131520545503583"
+        xyz="0.000215 0.082192 0.000045"
         rpy="0 0 0" />
       <mass
-        value="0.437859351944568" />
+        value="1.36249" />
       <inertia
         ixx="0.000761320903037865"
         ixy="0.00010323291048724"
@@ -516,7 +516,7 @@
         xyz="0.0130603185121422 4.03570967780209E-05 -0.0159605216469788"
         rpy="0 0 0" />
       <mass
-        value="0.121271833885802" />
+        value="0.12" />
       <inertia
         ixx="0.000264584071728155"
         ixy="-1.73910560956384E-07"
@@ -571,10 +571,10 @@
     name="ElbowRU_link">
     <inertial>
       <origin
-        xyz="0.056819807604414 0.00130441079169116 -0.161248980507902"
+        xyz="0.044664 -0.000097 -0.131711"
         rpy="0 0 0" />
       <mass
-        value="0.43543149660162" />
+        value="1.9519" />
       <inertia
         ixx="0.00116072652976023"
         ixy="8.04351173911062E-06"
@@ -629,10 +629,10 @@
     name="ElbowRD_link">
     <inertial>
       <origin
-        xyz="0.01501721253576 -0.0140086375733101 -0.0537845978405951"
+        xyz="0.028191 -0.007755 -0.097457"
         rpy="0 0 0" />
       <mass
-        value="0.405367838897484" />
+        value="1.05401" />
       <inertia
         ixx="0.000676246989908249"
         ixy="5.55176945002612E-06"
@@ -690,7 +690,7 @@
         xyz="0.00639012254804167 0.000136393641995469 0.0563198944392286"
         rpy="0 0 0" />
       <mass
-        value="0.348222354843636" />
+        value="0.1" />
       <inertia
         ixx="0.000507501702429949"
         ixy="1.11373651928209E-07"
@@ -745,10 +745,10 @@
     name="WristRD_link">
     <inertial>
       <origin
-        xyz="-0.0007891665998703 0.000668277029161484 0.0143918184359768"
+        xyz="-0.000283 0.000240 0.005168"
         rpy="0 0 0" />
       <mass
-        value="0.144157843696757" />
+        value="0.7646" />
       <inertia
         ixx="0.000210718602074961"
         ixy="-6.96872467093026E-07"
@@ -799,4 +799,36 @@
       effort="8"
       velocity="32.463" />
   </joint>
+  <!-- Motor masses added for accurate gravity compensation -->
+  <!-- Left Arm -->
+  <link name="ShoulderLU_motor2_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ShoulderLU_motor2_fixed" type="fixed"><origin xyz="0 0.086954 0" rpy="0 0 0"/><parent link="ShoulderLU_link"/><child link="ShoulderLU_motor2_link"/></joint>
+
+  <link name="ElbowLU_motor3_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowLU_motor3_fixed" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="ElbowLU_link"/><child link="ElbowLU_motor3_link"/></joint>
+
+  <link name="ElbowLU_motor4_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowLU_motor4_fixed" type="fixed"><origin xyz="0.075262 -0.00045791 -0.2413" rpy="0 0 0"/><parent link="ElbowLU_link"/><child link="ElbowLU_motor4_link"/></joint>
+
+  <link name="ElbowLD_motor5_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowLD_motor5_fixed" type="fixed"><origin xyz="0.033161 -0.0056591 -0.11391" rpy="0 0 0"/><parent link="ElbowLD_link"/><child link="ElbowLD_motor5_link"/></joint>
+
+  <link name="WristLD_motor6_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="WristLD_motor6_fixed" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="WristLD_link"/><child link="WristLD_motor6_link"/></joint>
+
+  <!-- Right Arm -->
+  <link name="ShoulderRU_motor2_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ShoulderRU_motor2_fixed" type="fixed"><origin xyz="0 0.091943 0" rpy="0 0 0"/><parent link="ShoulderRU_link"/><child link="ShoulderRU_motor2_link"/></joint>
+
+  <link name="ElbowRU_motor3_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowRU_motor3_fixed" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="ElbowRU_link"/><child link="ElbowRU_motor3_link"/></joint>
+
+  <link name="ElbowRU_motor4_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowRU_motor4_fixed" type="fixed"><origin xyz="0.079705 -0.00060472 -0.23692" rpy="0 0 0"/><parent link="ElbowRU_link"/><child link="ElbowRU_motor4_link"/></joint>
+
+  <link name="ElbowRD_motor5_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="ElbowRD_motor5_fixed" type="fixed"><origin xyz="0.032837 -0.0055583 -0.1128" rpy="0 0 0"/><parent link="ElbowRD_link"/><child link="ElbowRD_motor5_link"/></joint>
+
+  <link name="WristRD_motor6_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <joint name="WristRD_motor6_fixed" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="WristRD_link"/><child link="WristRD_motor6_link"/></joint>
 </robot>

@@ -13,6 +13,12 @@
                     <param name="ip_address">192.168.197.123</param>
                     <param name="port">5000</param>
                     <param name="zero_on_startup">${zero_on_startup}</param>
+                    <param name="gravity_compensation">true</param>
+                    <param name="left_arm_base_link">chest_link</param>
+                    <param name="left_arm_tip_link">WristLD_link</param>
+                    <param name="right_arm_base_link">chest_link</param>
+                    <param name="right_arm_tip_link">WristRD_link</param>
+                    <param name="urdf_path">$(find arha_description)/urdf/ARHA.urdf</param>
                 </xacro:unless>
             </hardware>
 

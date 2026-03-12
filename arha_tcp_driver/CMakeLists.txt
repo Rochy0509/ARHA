@@ -75,4 +75,12 @@ if(BUILD_ARHA_TESTS)
   add_executable(test_both_arms test/test_both_arms.cpp)
   target_link_libraries(test_both_arms PRIVATE ${PROJECT_NAME})
   install(TARGETS test_both_arms DESTINATION bin)
+
+  add_executable(test_right_arm_zero test/test_right_arm_zero.cpp)
+  target_link_libraries(test_right_arm_zero PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_right_arm_zero DESTINATION bin)
+
+  add_executable(test_arm_zero_auto test/test_arm_zero_auto.cpp)
+  target_link_libraries(test_arm_zero_auto PRIVATE ${PROJECT_NAME})
+  install(TARGETS test_arm_zero_auto DESTINATION bin)
 endif()

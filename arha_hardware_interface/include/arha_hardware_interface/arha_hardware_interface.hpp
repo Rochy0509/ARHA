@@ -14,6 +14,12 @@
 #include <rclcpp_lifecycle/state.hpp>
 #include <realtime_tools/realtime_buffer.hpp>
 
+// KDL includes
+#include <kdl/tree.hpp>
+#include <kdl/chain.hpp>
+#include <kdl/chainidsolver_recursive_newton_euler.hpp>
+#include <kdl_parser/kdl_parser.hpp>
+
 #include "arha_hardware_interface/visibility_control.hpp"
 
 #include <arha_tcp.hpp>
@@ -104,6 +110,16 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::atomic<bool> velocity_interface_running_{false};
         std::atomic<bool> effort_interface_running_{false};
         bool zero_on_startup_{false};
+
+        // Dynamics members
+        bool gravity_compensation_enabled_{false};
+        std::map<std::string, std::shared_ptr<KDL::ChainIdSolver_RNE>> gravity_solvers_;
+        std::map<std::string, KDL::Chain> chains_;
+        std::map<std::string, std::vector<int>> joint_to_kdl_index_;
+        std::map<std::string, std::string> base_links_;
+        std::map<std::string, std::string> tip_links_;
+
+        void initializeDynamics(const std::string& robot_description);
 };
 }
 
