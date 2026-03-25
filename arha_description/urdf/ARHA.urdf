@@ -133,19 +133,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ShoulderLU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ShoulderLU_joint"
-    type="revolute">
+  <joint name="ShoulderLU_joint" type="revolute">
     <origin
       xyz="0 0 0"
       rpy="0 0.24056 -1.5708" />
@@ -158,8 +148,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="100"
+      effort="5000"
       velocity="5.235988" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ShoulderLD_link">
@@ -191,19 +182,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ShoulderLD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ShoulderLD_joint"
-    type="revolute">
+  <joint name="ShoulderLD_joint" type="revolute">
     <origin
       xyz="0 0.086954 0"
       rpy="0.0052522 0 0.0015918" />
@@ -216,8 +197,9 @@
     <limit
       lower="0"
       upper="1.5708"
-      effort="60"
+      effort="5000"
       velocity="4.1888" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ElbowLU_link">
@@ -249,19 +231,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ElbowLU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ElbowLU_joint"
-    type="revolute">
+  <joint name="ElbowLU_joint" type="revolute">
     <origin
       xyz="0 0 0"
       rpy="0.00062146 0 -0.0020506" />
@@ -274,14 +246,15 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="20"
+      effort="5000"
       velocity="19.897" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ElbowLD_link">
     <inertial>
       <origin
-        xyz="0.028432 -0.007858 -0.098279"
+        xyz="0.028432 -0.007858 -0.048279"
         rpy="0 0 0" />
       <mass
         value="1.05401" />
@@ -307,19 +280,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ElbowLD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ElbowLD_joint"
-    type="revolute">
+  <joint name="ElbowLD_joint" type="revolute">
     <origin
       xyz="0.075262 -0.00045791 -0.2413"
       rpy="0.0011286 0.042027 0.00029402" />
@@ -332,8 +295,9 @@
     <limit
       lower="-1.5708"
       upper="0"
-      effort="60"
+      effort="5000"
       velocity="4.1888" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="WristLU_link">
@@ -365,19 +329,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/WristLU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="WristLU_joint"
-    type="revolute">
+  <joint name="WristLU_joint" type="revolute">
     <origin
       xyz="0.033161 -0.0056591 -0.11391"
       rpy="2.8571 -0.0068914 1.5425" />
@@ -390,8 +344,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="20"
+      effort="5000"
       velocity="19.897" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="WristLD_link">
@@ -423,19 +378,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/WristLD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="WristLD_joint"
-    type="revolute">
+  <joint name="WristLD_joint" type="revolute">
     <origin
       xyz="0 0 0.075065"
       rpy="0.036631 0 0" />
@@ -448,8 +393,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="8"
+      effort="5000"
       velocity="32.463124" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ShoulderRU_link">
@@ -481,19 +427,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ShoulderRU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ShoulderRU_joint"
-    type="revolute">
+  <joint name="ShoulderRU_joint" type="revolute">
     <origin
       xyz="-0.20263 0.0018367 0"
       rpy="3.1416 -0.28499 -1.5708" />
@@ -506,8 +442,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="100"
+      effort="5000"
       velocity="5.235988" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ShoulderRD_link">
@@ -539,19 +476,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ShoulderRD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ShoulderRD_joint"
-    type="revolute">
+  <joint name="ShoulderRD_joint" type="revolute">
     <origin
       xyz="0 0.091943 0"
       rpy="3.1389 -0.58853 0.00081251" />
@@ -564,8 +491,9 @@
     <limit
       lower="-1.5708"
       upper="0"
-      effort="60"
+      effort="5000"
       velocity="4.1888" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ElbowRU_link">
@@ -597,19 +525,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ElbowRU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ElbowRU_joint"
-    type="revolute">
+  <joint name="ElbowRU_joint" type="revolute">
     <origin
       xyz="0.01 0 0"
       rpy="-0.00017185 0.58853 3.1301" />
@@ -622,8 +540,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="20"
+      effort="5000"
       velocity="19.897" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="ElbowRD_link">
@@ -655,19 +574,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/ElbowRD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="ElbowRD_joint"
-    type="revolute">
+  <joint name="ElbowRD_joint" type="revolute">
     <origin
       xyz="0.079705 -0.00060472 -0.23692"
       rpy="-4.9565E-05 -0.0018566 -1.1893E-05" />
@@ -680,8 +589,9 @@
     <limit
       lower="0"
       upper="1.5708"
-      effort="60"
+      effort="5000"
       velocity="4.1888" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="WristRU_link">
@@ -713,19 +623,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/WristRU_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="WristRU_joint"
-    type="revolute">
+  <joint name="WristRU_joint" type="revolute">
     <origin
       xyz="0.032837 -0.0055583 -0.1128"
       rpy="2.8571 -0.002299 1.5582" />
@@ -738,24 +638,27 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="20"
+      effort="5000"
       velocity="19.897" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <link
     name="WristRD_link">
     <inertial>
       <origin
-        xyz="-0.000283 0.000240 0.005168"
+        xyz="-0.000283 0.000240 0.025"
         rpy="0 0 0" />
+      <!-- Mass breakdown: 0.76kg motor + 0.50kg gripper + ~0.10kg camera = 1.36kg -->
+      <!-- Camera is mounted near the wrist joint (small lever arm), so CoM Z stays at 0.025m -->
       <mass
-        value="0.7646" />
+        value="1.36" />
       <inertia
-        ixx="0.000210718602074961"
-        ixy="-6.96872467093026E-07"
-        ixz="-1.50110128749547E-05"
-        iyy="0.000173165649110249"
-        iyz="-2.62309383761537E-06"
-        izz="0.000116799346279209" />
+        ixx="0.001"
+        ixy="0"
+        ixz="0"
+        iyy="0.001"
+        iyz="0"
+        izz="0.0005" />
     </inertial>
     <visual>
       <origin
@@ -771,19 +674,9 @@
           rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
       </material>
     </visual>
-    <collision>
-      <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
-      <geometry>
-        <mesh
-          filename="package://arha_description/meshes/WristRD_link.STL" />
-      </geometry>
-    </collision>
+
   </link>
-  <joint
-    name="WristRD_joint"
-    type="revolute">
+  <joint name="WristRD_joint" type="revolute">
     <origin
       xyz="0 0 0.076226"
       rpy="0.047691 0 0" />
@@ -796,8 +689,9 @@
     <limit
       lower="-1.5708"
       upper="1.5708"
-      effort="8"
+      effort="5000"
       velocity="32.463" />
+    <dynamics damping="0.1" friction="0.01"/>
   </joint>
   <!-- Motor masses added for accurate gravity compensation -->
   <!-- Left Arm -->
@@ -826,9 +720,9 @@
   <link name="ElbowRU_motor4_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
   <joint name="ElbowRU_motor4_fixed" type="fixed"><origin xyz="0.079705 -0.00060472 -0.23692" rpy="0 0 0"/><parent link="ElbowRU_link"/><child link="ElbowRU_motor4_link"/></joint>
 
-  <link name="ElbowRD_motor5_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <link name="ElbowRD_motor5_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.01"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
   <joint name="ElbowRD_motor5_fixed" type="fixed"><origin xyz="0.032837 -0.0055583 -0.1128" rpy="0 0 0"/><parent link="ElbowRD_link"/><child link="ElbowRD_motor5_link"/></joint>
 
-  <link name="WristRD_motor6_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.0"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
+  <link name="WristRD_motor6_link"><inertial><origin xyz="0 0 0" rpy="0 0 0"/><mass value="0.01"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial></link>
   <joint name="WristRD_motor6_fixed" type="fixed"><origin xyz="0 0 0" rpy="0 0 0"/><parent link="WristRD_link"/><child link="WristRD_motor6_link"/></joint>
 </robot>

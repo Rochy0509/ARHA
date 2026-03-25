@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     // Write PID to RAM first
     struct PidParam { uint8_t index; double value; };
-    const PidParam defaults[] = {
+    const PidParam defaults[] __attribute__((unused)) = {
         {0x01, 50.0}, {0x02, 50.0}, {0x04, 100.0}, {0x05, 5.0},
         {0x07, 100.0}, {0x08, 0.0}, {0x09, 0.0},
     };

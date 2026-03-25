@@ -1,50 +1,18 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Left Gripper Mount -->
+  <xacro:include filename="$(find arha_gazebo)/urdf/grippers/pincopen.xacro"/>
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
   
-  <!-- Include the Robotiq Hand-E gripper -->
-  <xacro:include filename="$(find robotiq_hande_description)/urdf/robotiq_hande_gripper.xacro"/>
-  
-  <!-- Instantiate left gripper (ros2_control disabled for Gazebo Classic) -->
-  <xacro:robotiq_hande_gripper
-    name="left_gripper"
-    prefix="left_"
+  <xacro:pincopen_gripper
+    prefix="left"
     parent="WristLD_link"
-    grip_pos_min="0.0"
-    grip_pos_max="0.025"
-    tty_port="/dev/null"
-    baudrate="115200"
-    parity="N"
-    data_bits="8"
-    stop_bit="1"
-    slave_id="9"
-    use_fake_hardware="true"
-    xyz="0 0 0.06"
-    rpy="0 0 0"
-    use_mimic="false"
-    use_ros2_control="false"
-  />
-  
-  <!-- NOTE: ros2_control for gripper joints is defined in arha_with_grippers.urdf.xacro
-       to avoid duplicate ros2_control blocks in Gazebo Classic -->
+  >
+    <origin xyz="0 0 0.13" rpy="1.5708 -1.5708 3.14159" />
+  </xacro:pincopen_gripper>
 
-  <!-- Add gazebo_grasp_fix plugin for grasping objects -->
-  <!-- 
-  <gazebo>
-     <plugin name="left_gripper_grasp" filename="libgazebo_grasp_fix.so">
-      <arm>
-        <arm_name>left_gripper</arm_name>
-        <palm_link>left_robotiq_hande_link</palm_link>
-        <gripper_link>left_robotiq_hande_left_finger</gripper_link>
-        <gripper_link>left_robotiq_hande_right_finger</gripper_link>
-      </arm>
-      <forces_angle_tolerance>100</forces_angle_tolerance>
-      <update_rate>4</update_rate>
-      <grip_count_threshold>4</grip_count_threshold>
-      <max_grip_count>8</max_grip_count>
-      <release_tolerance>0.005</release_tolerance>
-      <disable_collisions_on_attach>false</disable_collisions_on_attach>
-    </plugin>
-  </gazebo> 
-  -->
+  <xacro:sensor_d435 parent="left_Camera_mount_V1" name="left_camera" use_nominal_extrinsics="false" add_plug="false" use_mesh="true">
+    <origin xyz="0 0 0" rpy="0 0 1.5708"/>
+  </xacro:sensor_d435>
   
 </robot>

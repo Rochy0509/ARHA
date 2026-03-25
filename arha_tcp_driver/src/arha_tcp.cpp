@@ -1,4 +1,3 @@
-
 #include "arha_tcp.hpp"
 #include <vector>
 #include <cstdint>
@@ -28,7 +27,7 @@ arhaTCPDriver::~arhaTCPDriver() {
     disconnect();
 }
 
-// Connection management
+// Connection
 
 DriverError arhaTCPDriver::connect() {
     std::lock_guard<std::mutex> lock(socket_mutex_);
@@ -106,7 +105,7 @@ DriverError arhaTCPDriver::reconnect() {
     return connect();
 }
 
-// Limb registration
+// Registration
 
 DriverError arhaTCPDriver::registerLimb(const LimbConfig& limb) {
     if (limb.name.empty() || limb.motor_ids.empty()) {
@@ -147,7 +146,7 @@ size_t arhaTCPDriver::getTotalJoints() const {
     return total;
 }
 
-// Limb batch commands
+// Batch commands
 
 DriverError arhaTCPDriver::setPositions(const std::string& limb_name,
                                          const std::vector<double>& positions) {
@@ -249,9 +248,6 @@ DriverError arhaTCPDriver::getStates(const std::string& limb_name,
     err = receivePacket(response);
     if (err != DriverError::SUCCESS) return err;
 
-
-
-    // Response layout per joint: position(4) + velocity(4) + effort(4) = 12 bytes
     const size_t expected_size = num_joints * 12;
     if (response.size() < expected_size) {
         return setLastError(DriverError::INVALID_DATA,
@@ -273,7 +269,7 @@ DriverError arhaTCPDriver::getStates(const std::string& limb_name,
     return DriverError::SUCCESS;
 }
 
-// Single-joint within a limb
+// Single-joint commands
 
 DriverError arhaTCPDriver::setPosition(const std::string& limb_name,
                                         size_t joint_index, double position) {
@@ -344,7 +340,6 @@ DriverError arhaTCPDriver::getState(const std::string& limb_name,
     err = receivePacket(response);
     if (err != DriverError::SUCCESS) return err;
 
-    // Response: position(4) + velocity(4) + effort(4) = 12 bytes
     if (response.size() < 12) {
         return setLastError(DriverError::INVALID_DATA,
             "Response too short for motor state: got " +
@@ -358,7 +353,7 @@ DriverError arhaTCPDriver::getState(const std::string& limb_name,
     return DriverError::SUCCESS;
 }
 
-// Emergency operations
+// Emergency
 
 DriverError arhaTCPDriver::emergencyStop() {
     std::lock_guard<std::mutex> lock(socket_mutex_);
@@ -429,9 +424,7 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     err = sendPacket(CommandType::SET_ENCODER_ZERO, payload);
     if (err != DriverError::SUCCESS) return err;
 
-    // Firmware takes ~6s to reset and reboot, uses longer timeout
     auto old_timeout = config_.socket_timeout_ms;
-    // Temporarily increases receive timeout for this blocking call
     struct timeval tv;
     tv.tv_sec = 45;
     tv.tv_usec = 0;
@@ -440,7 +433,6 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     std::vector<uint8_t> response;
     err = receivePacket(response);
 
-    // Restores original timeout
     tv.tv_sec = old_timeout / 1000;
     tv.tv_usec = (old_timeout % 1000) * 1000;
     setsockopt(socket_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
@@ -448,13 +440,15 @@ DriverError arhaTCPDriver::setEncoderZero(const std::string& limb_name) {
     if (err != DriverError::SUCCESS) return err;
 
     if (response.empty() || response[0] != 1) {
+        std::string err_detail = response.empty() ? "empty response" :
+            ("response code " + std::to_string(response[0]));
         return setLastError(DriverError::INVALID_DATA,
-            "Encoder zero failed for limb '" + limb_name + "'");
+            "Encoder zero failed for limb '" + limb_name + "': " + err_detail);
     }
     return DriverError::SUCCESS;
 }
 
-// Gripper control
+// Accel
 
 DriverError arhaTCPDriver::readAccel(const std::string& limb_name,
                                      std::vector<uint32_t>& accel_values) {
@@ -513,31 +507,38 @@ DriverError arhaTCPDriver::writeAccel(const std::string& limb_name,
     return sendAndWaitAck(CommandType::WRITE_ACCEL, payload);
 }
 
-DriverError arhaTCPDriver::gripperPing() {
-    std::lock_guard<std::mutex> lock(socket_mutex_);
-    std::vector<uint8_t> empty;
-    return sendAndWaitAck(CommandType::GRIPPER_PING, empty);
-}
+// Gripper
 
-DriverError arhaTCPDriver::gripperOpen(uint16_t speed) {
+DriverError arhaTCPDriver::gripperPing(uint8_t gripper_index) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
     std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
+    return sendAndWaitAck(CommandType::GRIPPER_PING, payload);
+}
+
+DriverError arhaTCPDriver::gripperOpen(uint8_t gripper_index, uint16_t speed) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
     payload.push_back(speed & 0xFF);
     payload.push_back((speed >> 8) & 0xFF);
     return sendAndWaitAck(CommandType::GRIPPER_OPEN, payload);
 }
 
-DriverError arhaTCPDriver::gripperClose(uint16_t speed) {
+DriverError arhaTCPDriver::gripperClose(uint8_t gripper_index, uint16_t speed) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
     std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
     payload.push_back(speed & 0xFF);
     payload.push_back((speed >> 8) & 0xFF);
     return sendAndWaitAck(CommandType::GRIPPER_CLOSE, payload);
 }
 
-DriverError arhaTCPDriver::gripperMoveTo(uint16_t position, uint16_t speed) {
+DriverError arhaTCPDriver::gripperMoveTo(uint8_t gripper_index,
+                                          uint16_t position, uint16_t speed) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
     std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
     payload.push_back(position & 0xFF);
     payload.push_back((position >> 8) & 0xFF);
     payload.push_back(speed & 0xFF);
@@ -545,26 +546,39 @@ DriverError arhaTCPDriver::gripperMoveTo(uint16_t position, uint16_t speed) {
     return sendAndWaitAck(CommandType::GRIPPER_MOVE_TO, payload);
 }
 
-DriverError arhaTCPDriver::gripperGetStatus(uint16_t& position, int16_t& speed, int16_t& load,
-                                            uint8_t& voltage_decivolts, uint8_t& temp_c) {
+DriverError arhaTCPDriver::gripperGetStatus(uint8_t gripper_index,
+                                             uint16_t& position, int16_t& speed,
+                                             int16_t& load, uint8_t& voltage_decivolts,
+                                             uint8_t& temp_c) {
     std::lock_guard<std::mutex> lock(socket_mutex_);
-    std::vector<uint8_t> empty;
-    auto err = sendPacket(CommandType::GRIPPER_GET_STATUS, empty);
+    std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
+
+    auto err = sendPacket(CommandType::GRIPPER_GET_STATUS, payload);
     if (err != DriverError::SUCCESS) return err;
 
     std::vector<uint8_t> response;
     err = receivePacket(response);
     if (err != DriverError::SUCCESS) return err;
 
-    // Firmare sends 9 bytes: [ok(1)][pos(2)][speed(2)][load(2)][volt(1)][temp(1)]
+    if (response.empty()) {
+        return setLastError(DriverError::INVALID_DATA, "Empty response from gripper");
+    }
+
+    if (response[0] != 1) {
+        std::string err_type = "Unknown Error";
+        if (response[0] == 2)      err_type = "UART Frame Error (Collision/Noise)";
+        else if (response[0] == 3) err_type = "Motor Status Error (Protective Stop)";
+        else if (response[0] == 4) err_type = "UART Timeout (Servo Offline)";
+        else if (response[0] == 0) err_type = "Firmware Logic Error";
+
+        return setLastError(DriverError::INVALID_DATA, "Gripper read failed: " + err_type);
+    }
+
     if (response.size() < 9) {
         return setLastError(DriverError::INVALID_DATA,
             "Response too short for gripper status: got " +
             std::to_string(response.size()) + ", expected 9");
-    }
-
-    if (response[0] != 1) {
-        return setLastError(DriverError::INVALID_DATA, "Motor offline or read failed");
     }
 
     position          = response[1] | (response[2] << 8);
@@ -576,7 +590,57 @@ DriverError arhaTCPDriver::gripperGetStatus(uint16_t& position, int16_t& speed, 
     return DriverError::SUCCESS;
 }
 
-// Status and diagnostics
+DriverError arhaTCPDriver::gripperSetID(uint8_t gripper_index, uint8_t new_id) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
+    payload.push_back(new_id);
+    return sendAndWaitAck(CommandType::GRIPPER_SET_ID, payload);
+}
+
+DriverError arhaTCPDriver::gripperForceSetID(uint8_t gripper_index, uint8_t new_id) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
+    payload.push_back(new_id);
+    return sendAndWaitAck(CommandType::GRIPPER_SET_ID_BROADCAST, payload);
+}
+
+DriverError arhaTCPDriver::gripperScan(uint8_t gripper_index, std::vector<uint8_t>& ids_found) {
+    std::lock_guard<std::mutex> lock(socket_mutex_);
+    ids_found.clear();
+
+    std::vector<uint8_t> payload;
+    payload.push_back(gripper_index);
+
+    auto err = sendPacket(CommandType::GRIPPER_SCAN, payload);
+    if (err != DriverError::SUCCESS) return err;
+
+    std::vector<uint8_t> response;
+    err = receivePacket(response);
+    if (err != DriverError::SUCCESS) return err;
+
+    if (response.size() < 2) {
+        return setLastError(DriverError::INVALID_DATA, "Scan response too short");
+    }
+
+    if (response[0] != 1) {
+        return setLastError(DriverError::INVALID_DATA, "Scan failed on firmware");
+    }
+
+    uint8_t count = response[1];
+    if (response.size() < static_cast<size_t>(2 + count)) {
+        return setLastError(DriverError::INVALID_DATA, "Scan payload mismatch");
+    }
+
+    for (uint8_t i = 0; i < count; ++i) {
+        ids_found.push_back(response[2 + i]);
+    }
+
+    return DriverError::SUCCESS;
+}
+
+// Diagnostics
 
 std::string arhaTCPDriver::getLastErrorMessage() const {
     std::lock_guard<std::mutex> lock(error_mutex_);
@@ -612,16 +676,6 @@ DriverError arhaTCPDriver::validateLimbJoint(const std::string& limb_name,
 }
 
 // Low-level communication (private)
-//
-// Packet format (little-endian):
-//   [START_BYTE] [CMD] [LEN_LO] [LEN_HI] [PAYLOAD...] [CHECKSUM] [END_BYTE]
-//
-//   START_BYTE  = 0xAA
-//   CMD         = CommandType (1 byte)
-//   LEN         = payload length (2 bytes, little-endian)
-//   PAYLOAD     = variable length
-//   CHECKSUM    = XOR of CMD + LEN bytes + all PAYLOAD bytes
-//   END_BYTE    = 0x55
 
 DriverError arhaTCPDriver::sendPacket(CommandType cmd,
                                        const std::vector<uint8_t>& data) {
@@ -631,7 +685,6 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
 
     uint16_t payload_len = static_cast<uint16_t>(data.size());
 
-    // Builds the raw frame
     std::vector<uint8_t> frame;
     frame.reserve(6 + data.size());
 
@@ -642,7 +695,6 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
     frame.insert(frame.end(), data.begin(), data.end());
 
     if (config_.enable_checksum) {
-        // Calculates checksum over everything between START and CHECKSUM
         uint8_t cksum = 0;
         for (size_t i = 1; i < frame.size(); ++i) {
             cksum ^= frame[i];
@@ -652,8 +704,6 @@ DriverError arhaTCPDriver::sendPacket(CommandType cmd,
 
     frame.push_back(END_BYTE);
 
-
-    // Sends the entire frame
     size_t total_sent = 0;
     while (total_sent < frame.size()) {
         ssize_t sent = ::send(socket_fd_,
@@ -682,12 +732,15 @@ DriverError arhaTCPDriver::sendAndWaitAck(CommandType cmd,
     std::vector<uint8_t> ack;
     err = receivePacket(ack);
     if (err != DriverError::SUCCESS) {
-        return setLastError(err, "Failed to receive ACK for command 0x" +
+        closeSocket();
+        connected_.store(false);
+        return setLastError(err, "ACK receive failed for cmd 0x" +
             ([](uint8_t v) {
                 char buf[8];
                 std::snprintf(buf, sizeof(buf), "%02X", v);
                 return std::string(buf);
-            })(static_cast<uint8_t>(cmd)));
+            })(static_cast<uint8_t>(cmd)) +
+            " — socket closed, call reconnect()");
     }
 
     return DriverError::SUCCESS;
@@ -700,7 +753,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
 
     data.clear();
 
-    // Helper lambda receives exactly n bytes into buf
     auto recv_exact = [this](uint8_t* buf, size_t len) -> DriverError {
         size_t total = 0;
         while (total < len) {
@@ -713,7 +765,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
                 return DriverError::RECEIVE_FAILED;
             }
             if (n == 0) {
-                // Indicates peer closed connection
                 connected_.store(false);
                 return DriverError::RECEIVE_FAILED;
             }
@@ -722,7 +773,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
         return DriverError::SUCCESS;
     };
 
-    // Reads START_BYTE
     uint8_t start = 0;
     auto err = recv_exact(&start, 1);
     if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive start byte");
@@ -730,7 +780,6 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
         return setLastError(DriverError::INVALID_DATA, "Invalid start byte");
     }
 
-    // Reads CMD and LEN
     uint8_t header[3];
     err = recv_exact(header, 3);
     if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive header");
@@ -738,24 +787,20 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
     uint16_t payload_len = static_cast<uint16_t>(header[1]) |
                            (static_cast<uint16_t>(header[2]) << 8);
 
-
-    // Reads payload
     std::vector<uint8_t> payload(payload_len);
     if (payload_len > 0) {
         err = recv_exact(payload.data(), payload_len);
         if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive payload");
     }
 
-    // Reads checksum and END_BYTE
     if (config_.enable_checksum) {
-        uint8_t trailer[2]; // [checksum, end_byte]
+        uint8_t trailer[2];
         err = recv_exact(trailer, 2);
         if (err != DriverError::SUCCESS) return setLastError(err, "Failed to receive trailer");
 
         uint8_t received_cksum = trailer[0];
         uint8_t end_byte = trailer[1];
 
-        // Verifies checksum via XOR
         uint8_t calc_cksum = 0;
         for (int i = 0; i < 3; ++i) calc_cksum ^= header[i];
         for (auto b : payload) calc_cksum ^= b;
@@ -776,10 +821,7 @@ DriverError arhaTCPDriver::receivePacket(std::vector<uint8_t>& data) {
     }
 
     data = std::move(payload);
-
-
     return DriverError::SUCCESS;
-
 }
 
 void arhaTCPDriver::encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value) {
@@ -790,7 +832,6 @@ void arhaTCPDriver::encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value) {
 }
 
 void arhaTCPDriver::encodeMotorValue(std::vector<uint8_t>& buffer, double radians) {
-    // Sends as IEEE 754 float32 in radians
     float f = static_cast<float>(radians);
     uint8_t bytes[4];
     std::memcpy(bytes, &f, 4);
@@ -816,7 +857,6 @@ int32_t arhaTCPDriver::decodeInt32(const std::vector<uint8_t>& buffer, size_t of
 }
 
 double arhaTCPDriver::decodeMotorValue(const std::vector<uint8_t>& buffer, size_t offset) {
-    // Decodes IEEE 754 float32 in radians
     float f;
     std::memcpy(&f, buffer.data() + offset, 4);
     return static_cast<double>(f);
@@ -829,7 +869,6 @@ DriverError arhaTCPDriver::createSocket() {
             "socket() failed: " + std::string(std::strerror(errno)));
     }
 
-    // Disables Nagle's algorithm for low-latency
     int flag = 1;
     setsockopt(socket_fd_, IPPROTO_TCP, TCP_NODELAY,
                reinterpret_cast<char*>(&flag), sizeof(flag));
@@ -860,8 +899,6 @@ DriverError arhaTCPDriver::setSocketTimeout(int timeout_ms) {
     return DriverError::SUCCESS;
 }
 
-// Error handling (private)
-
 DriverError arhaTCPDriver::setLastError(DriverError error, const std::string& message) {
     {
         std::lock_guard<std::mutex> lock(error_mutex_);
@@ -879,11 +916,11 @@ DriverError arhaTCPDriver::setLastError(DriverError error, const std::string& me
     return error;
 }
 
-void arhaTCPDriver::logError(const std::string& message) {
+void arhaTCPDriver::logError(const std::string& /*message*/) {
     // Debug output removed
 }
 
-void arhaTCPDriver::logInfo(const std::string& message) {
+void arhaTCPDriver::logInfo(const std::string& /*message*/) {
     // Debug output removed
 }
 

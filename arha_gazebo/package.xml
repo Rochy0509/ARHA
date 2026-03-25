@@ -10,6 +10,7 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>arha_description</depend>
+  <depend>arha_controllers</depend>
   <depend>robotiq_hande_description</depend>
   <depend>realsense2_description</depend>
   <exec_depend>arha_moveit2</exec_depend>

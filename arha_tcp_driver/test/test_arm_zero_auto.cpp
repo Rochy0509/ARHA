@@ -4,8 +4,12 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include <cmath>
 
 using namespace arha_tcp_driver;
+
+static constexpr double DEG_TO_RAD = M_PI / 180.0;
+static constexpr double RAD_TO_DEG = 180.0 / M_PI;
 
 bool check(DriverError err, const std::string& ctx, arhaTCPDriver* drv = nullptr) {
     if (err != DriverError::SUCCESS) {
@@ -42,7 +46,7 @@ int main(int argc, char* argv[]) {
     std::string responsive_limb = "";
     
     // Test both limbs to see which one has responsive motors
-    for (const std::string& limb : {"left_arm", "right_arm"}) {
+    for (const std::string limb : {"left_arm", "right_arm"}) {
         std::cout << "\nChecking " << limb << "..." << std::endl;
         std::vector<double> pos, vel, eff;
         if (driver.getStates(limb, pos, vel, eff) == DriverError::SUCCESS) {
@@ -60,15 +64,50 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::cout << "\n--- Zeroing " << responsive_limb << " ---" << std::endl;
-    std::cout << "Target: All motors on " << responsive_limb << std::endl;
-    std::cout << "Action: Zeroing encoders and saving to ROM..." << std::endl;
-    std::cout << "This will take ~30-45 seconds. Do not interrupt." << std::endl;
+    std::cout << "\n--- Checking Zero Offsets for " << responsive_limb << " ---" << std::endl;
+    static constexpr double ZERO_THRESH = 0.05 * DEG_TO_RAD;
 
-    if (check(driver.setEncoderZero(responsive_limb), "setEncoderZero", &driver)) {
-        std::cout << "\nSUCCESS: " << responsive_limb << " zeroed successfully." << std::endl;
+    std::vector<double> pos, vel, eff;
+    if (driver.getStates(responsive_limb, pos, vel, eff) == DriverError::SUCCESS) {
+        std::cout << "  Current positions:";
+        for (size_t i = 0; i < pos.size(); ++i) {
+            std::cout << " " << pos[i] * RAD_TO_DEG << "°";
+        }
+        std::cout << std::endl;
+
+        bool needs_zero = false;
+        for (size_t i = 0; i < pos.size(); ++i) {
+            if (std::abs(pos[i]) > ZERO_THRESH) {
+                std::cout << "  " << responsive_limb << " J" << (i+1) << " = " 
+                          << pos[i] * RAD_TO_DEG << "° — needs zero" << std::endl;
+                needs_zero = true;
+            }
+        }
+
+        if (needs_zero) {
+            std::cout << "\nTarget: All motors on " << responsive_limb << std::endl;
+            std::cout << "Action: Zeroing encoders and saving to ROM..." << std::endl;
+            std::cout << "This will take ~30-45 seconds. Do not interrupt." << std::endl;
+
+            if (check(driver.setEncoderZero(responsive_limb), "setEncoderZero", &driver)) {
+                std::cout << "\nSUCCESS: " << responsive_limb << " zeroed successfully." << std::endl;
+                
+                // Read state after zero
+                if (driver.getStates(responsive_limb, pos, vel, eff) == DriverError::SUCCESS) {
+                    std::cout << "  State After Zero:";
+                    for (size_t i = 0; i < pos.size(); ++i) {
+                        std::cout << " " << pos[i] * RAD_TO_DEG << "°";
+                    }
+                    std::cout << std::endl;
+                }
+            } else {
+                std::cerr << "\nFAILED to zero " << responsive_limb << "." << std::endl;
+            }
+        } else {
+            std::cout << "\nSUCCESS: " << responsive_limb << " already zeroed ✓" << std::endl;
+        }
     } else {
-        std::cerr << "\nFAILED to zero " << responsive_limb << "." << std::endl;
+        std::cerr << "\nFAILED to get states for " << responsive_limb << "." << std::endl;
     }
 
     driver.disconnect();

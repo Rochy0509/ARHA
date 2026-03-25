@@ -16,7 +16,7 @@
                 </xacro:unless>
             </hardware>
 
-            <!-- RIGHT ARM JOINTS -->
+            <!-- Right Arm -->
             <joint name="ShoulderRU_joint">
                 <command_interface name="position"/>
                 <state_interface name="position">
@@ -81,6 +81,19 @@
                 <state_interface name="effort"/>
                 <param name="limb_name">right_arm</param>
                 <param name="motor_id">6</param>
+                <param name="direction">1</param>
+            </joint>
+
+            <!-- Gripper -->
+            <joint name="right_cam_joint">
+                <command_interface name="position"/>
+                <state_interface name="position">
+                  <param name="initial_value">0.0</param>
+                </state_interface>
+                <state_interface name="velocity"/>
+                <state_interface name="effort"/>
+                <param name="limb_name">right_gripper</param>
+                <param name="motor_id">1</param>
                 <param name="direction">1</param>
             </joint>
 

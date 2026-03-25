@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     std::cout << "--- Connecting ---" << std::endl;
     if (!check(driver.connect(), "Connect", &driver)) return 1;
     // Read and fix acceleration parameters — target 2500 dps/s for all motors
-    static constexpr uint32_t TARGET_ACCEL = 2500;
+    static constexpr uint32_t TARGET_ACCEL = 5000;
     std::cout << "\n--- Acceleration Parameters (target=" << TARGET_ACCEL << " dps/s) ---" << std::endl;
     std::cout << "  Motor   left_arm   right_arm" << std::endl;
     for (const auto& limb : {"left_arm", "right_arm"}) {
@@ -140,46 +140,30 @@ int main(int argc, char* argv[]) {
     }
 
     // Execute: for each joint, send 15° to both arms, wait, send 0° to both
-    std::cout << "\n--- Executing Parallel 15->0 Sequence ---" << std::endl;
-    for (int m = 0; m < 6 && running.load(); ++m) {
-        std::cout << "\nJoint " << (m + 1) << ":" << std::endl;
+    // Execute: Send 0° to both arms and hold
+    std::cout << "\n--- Moving to 0.0 and Holding ---" << std::endl;
+    std::vector<double> zero(6, 0.0);
+    check(driver.setPositions("left_arm",  zero), "left_arm  0°", &driver);
+    check(driver.setPositions("right_arm", zero), "right_arm 0°", &driver);
 
-        // Build targets: only the active joint moves, rest stay at 0
-        std::vector<double> left_15(6, 0.0), right_15(6, 0.0);
-        left_15[m]  = 15.0 * LEFT_DIRS[m]  * DEG_TO_RAD;
-        right_15[m] = 15.0 * RIGHT_DIRS[m] * DEG_TO_RAD;
-
-        // Send to both arms back-to-back
-        std::cout << "  -> 15 deg..." << std::endl;
-        check(driver.setPositions("left_arm",  left_15),  "left_arm  15°", &driver);
-        check(driver.setPositions("right_arm", right_15), "right_arm 15°", &driver);
-
-        // Monitor positions every 200ms for 3 seconds
-        std::cout << "  t(ms)  left(deg)  left(dps)  right(deg) right(dps)" << std::endl;
-        for (int s = 0; s < 15 && running.load(); ++s) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    std::cout << "Holding position at 0.0. Press Ctrl+C to exit." << std::endl;
+    while (running.load()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        
+        // Monitor positions occasionally
+        static int s = 0;
+        if (++s % 5 == 0) { // Print every 1 second
             std::vector<double> lp, lv, le, rp, rv, re;
             driver.getStates("left_arm",  lp, lv, le);
             driver.getStates("right_arm", rp, rv, re);
-            if (lp.size() > (size_t)m && lv.size() > (size_t)m && rp.size() > (size_t)m && rv.size() > (size_t)m) {
-                printf("  %4d   %8.2f   %8.2f   %8.2f   %8.2f\n",
-                       (s + 1) * 200,
-                       lp[m] * RAD_TO_DEG, lv[m] * RAD_TO_DEG,
-                       rp[m] * RAD_TO_DEG, rv[m] * RAD_TO_DEG);
-            } else {
-                printf("  %4d      [Error: Failed to read state]\n", (s + 1) * 200);
+            if (lp.size() > 0 && rp.size() > 0) {
+                printf("  [Left J1: %.2f°] [Right J1: %.2f°]\r", 
+                       lp[0] * RAD_TO_DEG, rp[0] * RAD_TO_DEG);
+                fflush(stdout);
             }
         }
-
-        // Back to 0
-        std::vector<double> zero(6, 0.0);
-        std::cout << "  -> 0 deg..." << std::endl;
-        check(driver.setPositions("left_arm",  zero), "left_arm  0°", &driver);
-        check(driver.setPositions("right_arm", zero), "right_arm 0°", &driver);
-
-        for (int w = 0; w < 15 && running.load(); ++w)
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
+
 
     std::cout << "\n--- Complete ---" << std::endl;
     driver.enableLimbMotors("left_arm",  false);

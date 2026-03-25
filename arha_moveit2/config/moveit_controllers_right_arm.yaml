@@ -3,6 +3,7 @@ moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControll
 moveit_simple_controller_manager:
   controller_names:
     - right_arm_controller
+    - right_gripper_controller
 
   right_arm_controller:
     action_ns: follow_joint_trajectory
@@ -15,3 +16,10 @@ moveit_simple_controller_manager:
       - ElbowRD_joint
       - WristRU_joint
       - WristRD_joint
+
+  right_gripper_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - right_cam_joint

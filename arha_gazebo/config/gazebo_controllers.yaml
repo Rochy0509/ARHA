@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 100  # Hz
+    update_rate: 1000  # Match physics update rate for high-frequency control
     
     # Controller list
     joint_state_broadcaster:
@@ -34,10 +34,8 @@ joint_state_broadcaster:
       - ElbowRD_joint
       - WristRU_joint
       - WristRD_joint
-      - left_robotiq_hande_left_finger_joint
-      - left_robotiq_hande_right_finger_joint
-      - right_robotiq_hande_left_finger_joint
-      - right_robotiq_hande_right_finger_joint
+      - left_cam_joint
+      - right_cam_joint
 
 # Left Arm Controller
 left_arm_controller:
@@ -117,8 +115,7 @@ right_arm_controller:
 left_gripper_controller:
   ros__parameters:
     joints:
-      - left_robotiq_hande_left_finger_joint
-      - left_robotiq_hande_right_finger_joint
+      - left_cam_joint
     command_interfaces:
       - position
     state_interfaces:
@@ -130,8 +127,7 @@ left_gripper_controller:
 
     # PID gains for gripper control
     gains:
-      left_robotiq_hande_left_finger_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
-      left_robotiq_hande_right_finger_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
+      left_cam_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
 
     constraints:
       stopped_velocity_tolerance: 0.05
@@ -141,8 +137,7 @@ left_gripper_controller:
 right_gripper_controller:
   ros__parameters:
     joints:
-      - right_robotiq_hande_left_finger_joint
-      - right_robotiq_hande_right_finger_joint
+      - right_cam_joint
     command_interfaces:
       - position
     state_interfaces:
@@ -154,8 +149,7 @@ right_gripper_controller:
 
     # PID gains for gripper control
     gains:
-      right_robotiq_hande_left_finger_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
-      right_robotiq_hande_right_finger_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
+      right_cam_joint: {p: 200.0, d: 10.0, i: 0.1, i_clamp: 5.0}
 
     constraints:
       stopped_velocity_tolerance: 0.05

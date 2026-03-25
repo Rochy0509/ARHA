@@ -1,0 +1,9 @@
+<library path="arha_controllers">
+  <class name="arha_controllers/JointImpedanceController"
+         type="arha_controllers::JointImpedanceController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>
+      The JointImpedanceController implements a virtual spring-damper system on each joint.
+    </description>
+  </class>
+</library>

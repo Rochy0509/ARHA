@@ -3,7 +3,7 @@ controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
-    right_arm_controller:
+    right_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
     joint_state_broadcaster:
@@ -18,6 +18,23 @@ right_arm_controller:
       - ElbowRD_joint
       - WristRU_joint
       - WristRD_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    open_loop_control: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+
+right_gripper_controller:
+  ros__parameters:
+    joints:
+      - right_cam_joint
     command_interfaces:
       - position
     state_interfaces:

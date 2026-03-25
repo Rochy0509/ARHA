@@ -18,6 +18,10 @@
 
 namespace arha_tcp_driver {
 
+    /* Gripper constants */
+    static constexpr uint8_t GRIPPER_RIGHT = 0;   /* USART2, servo ID 1 */
+    static constexpr uint8_t GRIPPER_LEFT  = 1;   /* USART6, servo ID 2 */
+
     enum class DriverError {
         SUCCESS = 0,
         CONNECTION_FAILED,
@@ -54,20 +58,20 @@ namespace arha_tcp_driver {
             arhaTCPDriver(const arhaTCPDriver&) = delete;
             arhaTCPDriver& operator=(const arhaTCPDriver&) = delete;
 
-            // Connection management
+            // Connection
             DriverError connect();
             void disconnect();
             bool isConnected() const;
             DriverError reconnect();
 
-            // Limb registration
+            // Registration
             DriverError registerLimb(const LimbConfig& limb);
             bool hasLimb(const std::string& limb_name) const;
             const LimbConfig* getLimbConfig(const std::string& limb_name) const;
             std::vector<std::string> getRegisteredLimbs() const;
             size_t getTotalJoints() const;
 
-            // Limb batch commands
+            // Batch commands
             DriverError setPositions(const std::string& limb_name,
                                     const std::vector<double>& positions);
             DriverError setVelocities(const std::string& limb_name,
@@ -79,9 +83,7 @@ namespace arha_tcp_driver {
                                 std::vector<double>& velocities,
                                 std::vector<double>& efforts);
 
-            // Single-joint within a limb
-            // Sends limb name in packet so the STM32 can route
-            // to the correct CAN channel (motor IDs repeat across limbs).
+            // Single-joint commands
             DriverError setPosition(const std::string& limb_name,
                                     size_t joint_index, double position);
             DriverError setVelocity(const std::string& limb_name,
@@ -93,7 +95,7 @@ namespace arha_tcp_driver {
                                 double& position, double& velocity,
                                 double& effort);
 
-            // Emergency operations
+            // Emergency
             DriverError emergencyStop();
             DriverError emergencyStopLimb(const std::string& limb_name);
             DriverError resetErrors();
@@ -107,24 +109,30 @@ namespace arha_tcp_driver {
             DriverError writeAccel(const std::string& limb_name,
                                   const std::vector<uint32_t>& accel_values);
 
-            // Gripper control
-            DriverError gripperPing();
-            DriverError gripperOpen(uint16_t speed = 0);
-            DriverError gripperClose(uint16_t speed = 0);
-            DriverError gripperMoveTo(uint16_t position, uint16_t speed = 0);
-            DriverError gripperGetStatus(uint16_t& position, int16_t& speed, int16_t& load,
-                                         uint8_t& voltage_decivolts, uint8_t& temp_c);
+            // Gripper
+            DriverError gripperPing(uint8_t gripper_index = GRIPPER_RIGHT);
+            DriverError gripperOpen(uint8_t gripper_index = GRIPPER_RIGHT,
+                                    uint16_t speed = 0);
+            DriverError gripperClose(uint8_t gripper_index = GRIPPER_RIGHT,
+                                     uint16_t speed = 0);
+            DriverError gripperMoveTo(uint8_t gripper_index,
+                                      uint16_t position, uint16_t speed = 0);
+            DriverError gripperGetStatus(uint8_t gripper_index,
+                                         uint16_t& position, int16_t& speed,
+                                         int16_t& load, uint8_t& voltage_decivolts,
+                                         uint8_t& temp_c);
+            DriverError gripperSetID(uint8_t gripper_index, uint8_t new_id);
+            DriverError gripperForceSetID(uint8_t gripper_index, uint8_t new_id);
+            DriverError gripperScan(uint8_t gripper_index, std::vector<uint8_t>& ids_found);
 
-            // Status and diagnostics
+            // Diagnostics
             std::string getLastErrorMessage() const;
             const DriverConfig& getConfig() const { return config_; }
 
-            // Callback for async error handling
             using ErrorCallback = std::function<void(DriverError, const std::string&)>;
             void setErrorCallback(ErrorCallback callback);
 
         private:
-            // Protocol definitions
             static constexpr uint8_t START_BYTE = 0xAA;
             static constexpr uint8_t END_BYTE = 0x55;
 
@@ -148,46 +156,39 @@ namespace arha_tcp_driver {
                 READ_ACCEL          = 0x31,
                 WRITE_ACCEL         = 0x32,
 
-                // Gripper commands
                 GRIPPER_PING        = 0x40,
                 GRIPPER_OPEN        = 0x41,
                 GRIPPER_CLOSE       = 0x42,
                 GRIPPER_MOVE_TO     = 0x43,
                 GRIPPER_GET_STATUS  = 0x44,
+                GRIPPER_SET_ID       = 0x45,
+                GRIPPER_SCAN         = 0x46,
+                GRIPPER_SET_ID_BROADCAST = 0x47,
 
                 PING                = 0xFF
             };
 
-            // Validation
             DriverError validateLimb(const std::string& limb_name) const;
             DriverError validateLimbJoint(const std::string& limb_name,
                                         size_t joint_index) const;
 
-            // Low-level communication
             DriverError sendPacket(CommandType cmd, const std::vector<uint8_t>& data);
             DriverError receivePacket(std::vector<uint8_t>& data);
-            // Sends a command and consumes the STM32's ACK response.
-            // Acts on all commands that don't return data (set, enable, e-stop, etc.)
             DriverError sendAndWaitAck(CommandType cmd, const std::vector<uint8_t>& data);
 
-            // Packet encoding/decoding
             void encodeUInt8(std::vector<uint8_t>& buffer, uint8_t value);
             void encodeUInt32(std::vector<uint8_t>& buffer, uint32_t value);
             void encodeString(std::vector<uint8_t>& buffer, const std::string& str);
             uint32_t decodeUInt32(const std::vector<uint8_t>& buffer, size_t offset);
             int32_t decodeInt32(const std::vector<uint8_t>& buffer, size_t offset);
-            // Encodes double radians to float32 radians (IEEE 754) for STM32 wire format
             void encodeMotorValue(std::vector<uint8_t>& buffer, double radians);
-            // Decodes float32 radians (IEEE 754) to double radians from STM32 wire format
             double decodeMotorValue(const std::vector<uint8_t>& buffer, size_t offset);
             uint8_t calculateChecksum(const std::vector<uint8_t>& data);
 
-            // Socket operations
             DriverError createSocket();
             void closeSocket();
             DriverError setSocketTimeout(int timeout_ms);
 
-            // Error handling
             DriverError setLastError(DriverError error, const std::string& message);
             void logError(const std::string& message);
             void logInfo(const std::string& message);

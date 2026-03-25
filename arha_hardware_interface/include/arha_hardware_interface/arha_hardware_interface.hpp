@@ -98,7 +98,6 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         // Flat arrays for ros2_control to point to, as RealTimeBuffer lacks stable pointers
         std::vector<double> hw_position_commands_;
         std::vector<double> hw_velocity_commands_;
-        std::vector<double> hw_effort_commands_;     
         std::vector<double> hw_position_states_;     
         std::vector<double> hw_velocity_states_;  
         std::vector<double> hw_effort_states_;
@@ -108,7 +107,6 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         // Flags to check if interfaces are running
         std::atomic<bool> position_interface_running_{false};
         std::atomic<bool> velocity_interface_running_{false};
-        std::atomic<bool> effort_interface_running_{false};
         bool zero_on_startup_{false};
 
         // Dynamics members

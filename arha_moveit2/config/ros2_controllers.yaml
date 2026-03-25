@@ -10,9 +10,21 @@ controller_manager:
     right_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    left_gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
+
+    left_arm_impedance_controller:
+      type: arha_controllers/JointImpedanceController
+
+    right_arm_impedance_controller:
+      type: arha_controllers/JointImpedanceController
 
 left_arm_controller:
   ros__parameters:
@@ -42,3 +54,49 @@ right_arm_controller:
     state_interfaces:
       - position
       - velocity
+
+left_gripper_controller:
+  ros__parameters:
+    joints:
+      - left_cam_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+right_gripper_controller:
+  ros__parameters:
+    joints:
+      - right_cam_joint
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+left_arm_impedance_controller:
+  ros__parameters:
+    joints:
+      - ShoulderLU_joint
+      - ShoulderLD_joint
+      - ElbowLU_joint
+      - ElbowLD_joint
+      - WristLU_joint
+      - WristLD_joint
+    # VERY low gains for real hardware testing initially to avoid any sudden movements
+    kp: [5.0, 5.0, 3.0, 3.0, 1.0, 1.0]
+    kd: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+right_arm_impedance_controller:
+  ros__parameters:
+    joints:
+      - ShoulderRU_joint
+      - ShoulderRD_joint
+      - ElbowRU_joint
+      - ElbowRD_joint
+      - WristRU_joint
+      - WristRD_joint
+    # VERY low gains for real hardware testing initially to avoid any sudden movements
+    kp: [5.0, 5.0, 3.0, 3.0, 1.0, 1.0]
+    kd: [0.1, 0.1, 0.1, 0.1, 0.1, 0.1]

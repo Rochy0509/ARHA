@@ -11,12 +11,7 @@ namespace arha_hardware_interface{
 
 // Torque constants (Nm/A) for MyActuator motors
 static const std::map<uint32_t, double> motor_torque_constants = {
-    {1, 7.46}, // X10S2V3
-    {2, 7.50}, // X8-60
-    {3, 1.92}, // X8-20
-    {4, 7.50}, // X8-60
-    {5, 1.92}, // X8-20
-    {6, 1.25}  // X6-8
+    {1, 7.46}, {2, 7.50}, {3, 1.92}, {4, 7.50}, {5, 1.92}, {6, 1.25}
 };
     
 rclcpp::Logger ArhaHardwareInterface::getLogger() {
@@ -29,7 +24,6 @@ ArhaHardwareInterface::~ArhaHardwareInterface() {
         polling_thread_.join();
     }
 
-    // Safeguards in case driver_ is null so it skips motor disable
     if (driver_) {
         driver_->enableMotors(false);
     }
@@ -48,9 +42,8 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
 
     num_joints_ = info.joints.size();
     
-    // Extracts information from URDF to assign joints to the limb
     for (const auto& joint : info.joints){
-        std::string limb = joint.parameters.at("limb_name"); // get what limb is the joint assigned to
+        std::string limb = joint.parameters.at("limb_name");
         std::string motor_id = joint.parameters.at("motor_id");
 
         if (std::find(limb_names_.begin(), limb_names_.end(), limb) == limb_names_.end() ){
@@ -65,15 +58,12 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
             dir = (std::stod(joint.parameters.at("direction")) < 0.0) ? -1.0 : 1.0;
         }
         directions_.push_back(dir);
-
-        directions_.push_back(dir);
     }
 
-    // Initializes interfaces
+    // Initialize interfaces
     for (const auto& limb : limb_names_){
         auto num_joints = joint_names_[limb].size();
 
-        // Initializes state buffers
         position_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
         velocity_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
         effort_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
@@ -81,7 +71,6 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
 
     hw_position_commands_.resize(num_joints_, 0.0);
     hw_velocity_commands_.resize(num_joints_, 0.0);
-    hw_effort_commands_.resize(num_joints_, 0.0);
 
     hw_position_states_.resize(num_joints_, 0.0);
     hw_velocity_states_.resize(num_joints_, 0.0);
@@ -97,11 +86,8 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
     // Connection settings from URDF
     driver_config_.ip_address = info.hardware_parameters.at("ip_address");
     driver_config_.port = std::stoi(info.hardware_parameters.at("port"));
-    // Multi-second timeout tolerates heavy ROS 2 FastDDS PointCloud multicasts
-    // But zeroing the motors requires an extremely long timeout (up to 45 seconds)
     driver_config_.socket_timeout_ms = zero_on_startup_ ? 45000 : 5000; 
-    driver_config_.verbose = false;          // Disabled verbose byte stream debugging
-
+    driver_config_.verbose = false;
     // Gravity compensation settings
     gravity_compensation_enabled_ = false;
     if (info.hardware_parameters.count("gravity_compensation")) {
@@ -164,10 +150,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_configure(const rcl
         driver_->registerLimb({limb, motor_ids_[limb]});
     }
 
-    // Starts connection
     auto err = driver_->connect();
-
-    // Checks if the stm32 was reached to start connection
     if (err != arha_tcp_driver::DriverError::SUCCESS){
         RCLCPP_FATAL(getLogger(), "Failed to connect to STM32: %s", 
         driver_->getLastErrorMessage().c_str());
@@ -197,17 +180,15 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
     RCLCPP_INFO(getLogger(), "Activating ARHA hardware");
 
     auto err = driver_->enableMotors(true);
-    // Checks for any error
     if (err != arha_tcp_driver::DriverError::SUCCESS){
-        RCLCPP_ERROR(getLogger(), "Failed to enable motors: %s. Continuing anyway to allow debug.",
+        RCLCPP_ERROR(getLogger(), "Failed to enable motors: %s",
         driver_->getLastErrorMessage().c_str());
     }
     else {
         RCLCPP_INFO(getLogger(), "Motors Enabled!");
-        // Waits 0.5s for STM32 to power up drivers
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
-    // Starts polling_thread
+    // Start polling_thread
     stop_polling_ = false;
     if (polling_thread_.joinable()){
         stop_polling_ = true;
@@ -216,13 +197,13 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
     }
     polling_thread_ = std::thread(&ArhaHardwareInterface::pollingLoop, this);
 
-    // Sets Real-Time Priority to prevent Linux CFS from starving the driver
+    // Set RT Priority
     struct sched_param param;
-    param.sched_priority = 80; // High real-time priority
+    param.sched_priority = 80;
     if (pthread_setschedparam(polling_thread_.native_handle(), SCHED_FIFO, &param) != 0) {
-        RCLCPP_WARN(getLogger(), "Failed to set RT priority. Run with sudo or setcap cap_sys_nice.");
+        RCLCPP_WARN(getLogger(), "Failed to set RT priority.");
     } else {
-        RCLCPP_INFO(getLogger(), "Polling thread set to SCHED_FIFO priority 80");
+        RCLCPP_INFO(getLogger(), "Polling thread priority 80");
     }
 
     return hardware_interface::CallbackReturn::SUCCESS;
@@ -230,18 +211,14 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_activate(const rclc
 
 hardware_interface::CallbackReturn ArhaHardwareInterface::on_deactivate(const rclcpp_lifecycle::State& /*prev_state*/){
     
-    // Stops polling thread
     stop_polling_ = true;
     if (polling_thread_.joinable()){
         polling_thread_.join();
     }
     
-    //disabling all motors
     auto err = driver_->enableMotors(false);
-
-    //check for errors
     if (err != arha_tcp_driver::DriverError::SUCCESS){
-        RCLCPP_FATAL(getLogger(), "Failed to disable all motors: %s",
+        RCLCPP_FATAL(getLogger(), "Failed to disable motors: %s",
         driver_->getLastErrorMessage().c_str());
         return hardware_interface::CallbackReturn::ERROR;
     }
@@ -314,7 +291,6 @@ std::vector<hardware_interface::CommandInterface> ArhaHardwareInterface::export_
         for (const auto& joint_name : joint_names_[limb_name]){
             command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_POSITION, &hw_position_commands_[i]);
             command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_VELOCITY, &hw_velocity_commands_[i]);
-            command_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_EFFORT, &hw_effort_commands_[i]);
             i++;
         }
     }
@@ -358,10 +334,8 @@ hardware_interface::return_type ArhaHardwareInterface::prepare_command_mode_swit
             }
         }
     }
-    // Allow partial activations (e.g. left_arm_controller activating 6 joints, right_arm_controller activating 6)
+    // Allow partial activations
     // if (!start_interfaces.empty() && start_interfaces.size() != num_joints_ ) {
-    //     RCLCPP_ERROR(getLogger(), "Expected %zu interfaces for mode switch, got %zu.", num_joints_,
-    //     start_interfaces.size());
     //     return hardware_interface::return_type::ERROR;
     // }
 
@@ -374,22 +348,25 @@ hardware_interface::return_type ArhaHardwareInterface::perform_command_mode_swit
     
     position_interface_running_ = false;
     velocity_interface_running_ = false;
-    effort_interface_running_ = false;
 
     if (!start_interfaces.empty()){
         std::string mode = start_interfaces[0].substr(start_interfaces[0].find('/') + 1);
         if (mode == hardware_interface::HW_IF_POSITION) {
             position_interface_running_ = true;
-            RCLCPP_INFO(getLogger(), "Position mode enabled for all joints");
+            for (size_t i = 0; i < num_joints_; ++i) {
+                hw_position_commands_[i] = hw_position_states_[i];
+            }
+            RCLCPP_INFO(getLogger(), "Position mode enabled");
         }
         else if (mode == hardware_interface::HW_IF_VELOCITY) {
             velocity_interface_running_ = true;
+            for (size_t i = 0; i < num_joints_; ++i) {
+                hw_velocity_commands_[i] = hw_velocity_states_[i];
+            }
             RCLCPP_INFO(getLogger(), "Velocity mode enabled for all joints");
         }
-        else if (mode == hardware_interface::HW_IF_EFFORT) {
-            effort_interface_running_ = true;
-            RCLCPP_INFO(getLogger(), "Effort mode enabled for all joints");
-        }
+    } else {
+        RCLCPP_INFO(getLogger(), "No active controller interfaces, falling back to gravity comp if enabled");
     }
 
     return hardware_interface::return_type::OK;
@@ -418,8 +395,6 @@ hardware_interface::return_type ArhaHardwareInterface::read(
 
 hardware_interface::return_type ArhaHardwareInterface::write(
     const rclcpp::Time& /*time*/, const rclcpp::Duration& /*period*/) {
-    // Commands are directly written to hw_*_commands_ by ros2_control.
-    // pollingLoop reads from them directly.
     return hardware_interface::return_type::OK;
 }
 
@@ -435,12 +410,10 @@ void ArhaHardwareInterface::pollingLoop() {
             static rclcpp::Clock steady_clock(RCL_STEADY_TIME);
             RCLCPP_WARN_THROTTLE(getLogger(), steady_clock, 2000, "TCP disconnected, attempting reconnect...");
             if (driver_->reconnect() != arha_tcp_driver::DriverError::SUCCESS) {
-                // Back off for 1 second before trying again so we don't spam the network
                 std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                 continue;
             }
-            RCLCPP_INFO(getLogger(), "TCP Reconnected successfully.");
-            // Specifically does NOT auto-zero encoders here for safety against sagging.
+            RCLCPP_INFO(getLogger(), "TCP Reconnected.");
         }
         
         size_t index = 0;
@@ -448,18 +421,35 @@ void ArhaHardwareInterface::pollingLoop() {
         for (const auto& limb : limb_names_) {
             size_t n = joint_names_[limb].size();
 
-            // ── Read states ──
-            std::vector<double> current_pos(n);
-            std::vector<double> current_vel(n);
-            std::vector<double> current_eff(n);
+            // Read states
+            std::vector<double> current_pos(n, 0.0);
+            std::vector<double> current_vel(n, 0.0);
+            std::vector<double> current_eff(n, 0.0);
+            arha_tcp_driver::DriverError err;
 
-            auto err = driver_->getStates(limb, current_pos, current_vel, current_eff);
+            if (limb == "left_gripper" || limb == "right_gripper") {
+                uint8_t g_idx = (limb == "right_gripper") ? arha_tcp_driver::GRIPPER_RIGHT : arha_tcp_driver::GRIPPER_LEFT;
+                uint16_t pos = 0; int16_t speed = 0, load = 0; uint8_t volt = 0, temp = 0;
+                err = driver_->gripperGetStatus(g_idx, pos, speed, load, volt, temp);
+                if (err == arha_tcp_driver::DriverError::SUCCESS && n > 0) {
+                    double open_pos = (limb == "right_gripper") ? 2819.0 : 1775.0;
+                    double close_pos = (limb == "right_gripper") ? 3610.0 : 1155.0;
+                    
+                    double rad_pos = -0.57 * (static_cast<double>(pos) - open_pos) / (close_pos - open_pos);
+                    current_pos[0] = std::max(-0.57, std::min(0.0, rad_pos));
+                    current_vel[0] = static_cast<double>(speed); 
+                    current_eff[0] = static_cast<double>(load);
+                }
+            } else {
+                err = driver_->getStates(limb, current_pos, current_vel, current_eff);
+            }
+
             if (err == arha_tcp_driver::DriverError::SUCCESS) {
                 position_state_buffer_[limb].writeFromNonRT(current_pos);
                 velocity_state_buffer_[limb].writeFromNonRT(current_vel);
                 effort_state_buffer_[limb].writeFromNonRT(current_eff);
 
-                // Updates local states for immediate use in this cycle
+                // Update local states
                 for (size_t j = 0; j < n; ++j) {
                     double dir = directions_[index + j];
                     hw_position_states_[index + j] = dir * current_pos[j];
@@ -500,7 +490,7 @@ void ArhaHardwareInterface::pollingLoop() {
                     }
                 }
 
-                if (debug_counter % 20 == 0) { // 1Hz logging
+                if (debug_counter % 20 == 0) {
                     std::stringstream ss_q;
                     ss_q << "JointPos " << limb << " (rad):";
                     for(size_t j = 0; j < n; ++j) ss_q << " " << std::fixed << std::setprecision(3) << q(j);
@@ -510,10 +500,11 @@ void ArhaHardwareInterface::pollingLoop() {
                     ss << "GravComp " << limb << " (Nm):";
                     for(auto g : gravity_torques) ss << " " << std::fixed << std::setprecision(2) << g;
                     RCLCPP_INFO(getLogger(), "%s", ss.str().c_str());
+
                 }
             }
 
-            // ── Send commands ──
+            // Send commands
             if (position_interface_running_) {
                 std::vector<double> cmds(n);
                 {
@@ -523,7 +514,19 @@ void ArhaHardwareInterface::pollingLoop() {
                     }
                 }
                 
-                if (true) {
+                if (limb == "left_gripper" || limb == "right_gripper") {
+                    if (n > 0) {
+                        uint8_t g_idx = (limb == "right_gripper") ? arha_tcp_driver::GRIPPER_RIGHT : arha_tcp_driver::GRIPPER_LEFT;
+                        double open_pos = (limb == "right_gripper") ? 2819.0 : 1775.0;
+                        double close_pos = (limb == "right_gripper") ? 3610.0 : 1155.0;
+
+                        double rad_cmd = std::max(-0.57, std::min(0.0, cmds[0]));
+                        double tick_cmd = open_pos + (rad_cmd / -0.57) * (close_pos - open_pos);
+                        
+                        uint16_t cmd_pos = static_cast<uint16_t>(std::round(tick_cmd));
+                        driver_->gripperMoveTo(g_idx, cmd_pos, 0);
+                    }
+                } else if (true) {
                     static std::map<std::string, std::vector<double>> last_cmds;
                     bool should_send = false;
                     if (last_cmds.find(limb) == last_cmds.end()) {
@@ -545,19 +548,7 @@ void ArhaHardwareInterface::pollingLoop() {
                     }
                 }
 
-                // Gravity compensation feedforward torques alongside position commands
-                if (gravity_compensation_enabled_) {
-                    std::vector<double> effort_cmds(n);
-                    for (size_t j = 0; j < n; ++j) {
-                        double kt = 1.0;
-                        uint32_t motor_id = motor_ids_[limb][j];
-                        if (motor_torque_constants.count(motor_id)) {
-                            kt = motor_torque_constants.at(motor_id);
-                        }
-                        effort_cmds[j] = directions_[index + j] * (gravity_torques[j] / kt);
-                    }
-                    driver_->setEfforts(limb, effort_cmds);
-                }
+
             } else if (velocity_interface_running_) {
                 std::vector<double> cmds(n);
                 {
@@ -567,9 +558,8 @@ void ArhaHardwareInterface::pollingLoop() {
                     }
                 }
                 driver_->setVelocities(limb, cmds);
-            } else if (effort_interface_running_ || gravity_compensation_enabled_) {
+            } else if (gravity_compensation_enabled_) {
                 std::vector<double> cmds(n);
-
                 {
                     std::lock_guard<std::mutex> lock(commands_mutex_);
                     for (size_t j = 0; j < n; ++j) {
@@ -578,15 +568,32 @@ void ArhaHardwareInterface::pollingLoop() {
                         if (motor_torque_constants.count(motor_id)) {
                             kt = motor_torque_constants.at(motor_id);
                         }
+                        
+                        // By default, full gravity compensation mapped to motor
+                        double grav_polarity = 1.0;
+                        double gravity_torque_nm = gravity_torques[j] * grav_polarity;
 
-                        double control_effort_nm = hw_effort_commands_[index + j];
+                        // Apply empirical torque multipliers for heavy payload geometries
+                        if (j >= 4) {
+                            double wrist_tuning_multiplier = (limb == "right_arm") ? 2.0 : 1.0; 
+                            gravity_torque_nm *= wrist_tuning_multiplier;
+                        }
+
+                        // Apply minimal damping (0.01) to wrists to prevent jitter or violent drops
+                        double kd = (j >= 4) ? 0.01 : 0.8;
+                        double damping_torque = kd * hw_velocity_states_[index + j];
                         
-                        double total_torque_nm = control_effort_nm + gravity_torques[j];
-                        
-                        // total_torque_nm = std::clamp(total_torque_nm, -MAX_TORQUE_NM, MAX_TORQUE_NM);
+                        double total_torque_nm = gravity_torque_nm - damping_torque;
 
                         cmds[j] = directions_[index + j] * (total_torque_nm / kt);
                     }
+                }
+
+                if (debug_counter % 20 == 0) {
+                    std::stringstream ss_eff;
+                    ss_eff << "GravEffort " << limb << " (A):";
+                    for (auto e : cmds) ss_eff << " " << std::fixed << std::setprecision(4) << e;
+                    RCLCPP_INFO(getLogger(), "%s", ss_eff.str().c_str());
                 }
 
                 driver_->setEfforts(limb, cmds);

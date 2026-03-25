@@ -4,8 +4,8 @@ moveit_simple_controller_manager:
   controller_names:
     - left_arm_controller
     - right_arm_controller
-#    - left_gripper_controller
-#    - right_gripper_controller
+    - left_gripper_controller
+    - right_gripper_controller
 
   left_arm_controller:
     action_ns: follow_joint_trajectory
@@ -31,18 +31,16 @@ moveit_simple_controller_manager:
       - WristRU_joint
       - WristRD_joint
 
-#  left_gripper_controller:
-#    action_ns: follow_joint_trajectory
-#    type: FollowJointTrajectory
-#    default: true
-#    joints:
-#      - left_robotiq_hande_left_finger_joint
-#      - left_robotiq_hande_right_finger_joint
-#
-#  right_gripper_controller:
-#    action_ns: follow_joint_trajectory
-#    type: FollowJointTrajectory
-#    default: true
-#    joints:
-#      - right_robotiq_hande_left_finger_joint
-#      - right_robotiq_hande_right_finger_joint
+  left_gripper_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - left_cam_joint
+
+  right_gripper_controller:
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
+    default: true
+    joints:
+      - right_cam_joint
