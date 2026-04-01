@@ -23,6 +23,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
       scripts/zero_right_arm_motors.py
       scripts/right_arm_five_positions.py
       scripts/play_poses.py
+      scripts/planning_scene_publisher.py
+      scripts/mimic_updater.py
     DESTINATION lib/${PROJECT_NAME})
 endif()
 

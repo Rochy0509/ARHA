@@ -72,6 +72,22 @@
         <joint name="WristRD_joint" value="0"/>
         <joint name="WristRU_joint" value="0"/>
     </group_state>
+    <group_state name="left_pre_grasp" group="left_arm">
+        <joint name="ShoulderLU_joint" value="-0.5"/>
+        <joint name="ShoulderLD_joint" value="0.0"/>
+        <joint name="ElbowLU_joint"    value="0.0"/>
+        <joint name="ElbowLD_joint"    value="-1.2"/>
+        <joint name="WristLU_joint"    value="0.0"/>
+        <joint name="WristLD_joint"    value="0.0"/>
+    </group_state>
+    <group_state name="right_pre_grasp" group="right_arm">
+        <joint name="ShoulderRU_joint" value="0.5"/>
+        <joint name="ShoulderRD_joint" value="0.0"/>
+        <joint name="ElbowRU_joint"    value="0.0"/>
+        <joint name="ElbowRD_joint"    value="1.2"/>
+        <joint name="WristRU_joint"    value="0.0"/>
+        <joint name="WristRD_joint"    value="0.0"/>
+    </group_state>
     <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
     <virtual_joint name="virtual_joint" type="fixed" parent_frame="world" child_link="world_link"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->

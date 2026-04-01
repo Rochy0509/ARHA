@@ -5,7 +5,7 @@
   <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro"/>
 
   <!-- Instantiate RealSense D435 on left gripper link -->
-  <xacro:sensor_d435 parent="left_robotiq_hande_link" name="camera_left_wrist" use_nominal_extrinsics="true">
+  <xacro:sensor_d435 parent="WristLD_link" name="camera_left_wrist" use_nominal_extrinsics="true">
     <!-- Position - slightly to the side and forward of gripper -->
     <origin xyz="0.0 0.075 0.0005" rpy="0 -1.5708 1.5708"/>
   </xacro:sensor_d435>

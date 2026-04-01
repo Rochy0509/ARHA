@@ -96,6 +96,42 @@
                 <param name="motor_id">1</param>
                 <param name="direction">1</param>
             </joint>
+            <joint name="right_Revolute_2_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
+            <joint name="right_Revolute_4_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">-1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
+            <joint name="right_Revolute_5_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">-1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
+            <joint name="right_Revolute_3_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
+            <joint name="right_Revolute_6_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">-1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
+            <joint name="right_Revolute_7_0">
+                <param name="mimic">right_cam_joint</param>
+                <param name="multiplier">-1.0</param>
+                <command_interface name="position"/>
+                <state_interface name="position"/>
+            </joint>
 
         </ros2_control>
     </xacro:macro>

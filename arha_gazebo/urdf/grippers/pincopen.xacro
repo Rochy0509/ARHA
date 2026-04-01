@@ -1,7 +1,7 @@
+<?xml version="1.0" ?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:macro name="pincopen_gripper" params="prefix parent *origin">
     
-    <!-- Parent Attachment -->
     <joint name="${prefix}_gripper_mount_joint" type="fixed">
       <xacro:insert_block name="origin" />
       <parent link="${parent}" />
@@ -9,20 +9,25 @@
     </joint>
 
     <link name="${prefix}_Bottom_Plate">
+        <inertial>
+            <mass value="0.500" />
+            <origin xyz="-0.0285975 -3.86746e-05 -0.00842464" rpy="0 0 0" />
+            <inertia ixx="2.5e-03" ixy="0" ixz="0" iyy="2.5e-03" iyz="0" izz="2.5e-03" />
+        </inertial>
         <visual>
             <geometry>
                 <mesh filename="package://pincopen/meshes/107.stl" scale="1 1 1" />
             </geometry>
             <material name="light_grey"><color rgba="0.9 0.9 0.9 1" /></material>
         </visual>
-        <collision>
-            <geometry>
-                <mesh filename="package://pincopen/meshes/107.stl" scale="1 1 1" />
-            </geometry>
-        </collision>
     </link>
 
     <link name="${prefix}_Cam">
+        <inertial>
+            <mass value="0.100" />
+            <origin xyz="-9.28675e-06 -1.26037e-06 0.00337664" rpy="0 0 0" />
+            <inertia ixx="5.0e-04" ixy="0" ixz="0" iyy="5.0e-04" iyz="0" izz="5.0e-04" />
+        </inertial>
         <visual>
             <origin xyz="0.0180424 0 0.0024" rpy="0 -0 0" />
             <geometry>
@@ -32,18 +37,24 @@
         </visual>
     </link>
 
-    <!-- Main Active Joint -->
     <joint name="${prefix}_cam_joint" type="revolute">
         <origin xyz="-0.0180424 0 -0.0035" rpy="0 0 -1.50657" />
         <axis xyz="0 0 -1" />
         <parent link="${prefix}_Bottom_Plate" />
         <child link="${prefix}_Cam" />
+        <dynamics damping="10.0" friction="5.0"/>
         <limit effort="10" velocity="2.0" lower="-0.57" upper="0.0" />
     </joint>
 
-    <!-- Mimic Joints -->
-    
+
+
+    <!-- ==================== FINGER 1 ==================== -->
     <link name="${prefix}_Internal_Rod_1">
+        <inertial>
+            <mass value="0.080" />
+            <origin xyz="0.0101857 0.0065898 0.008" rpy="0 0 0" />
+            <inertia ixx="3.0e-04" ixy="0" ixz="0" iyy="3.0e-04" iyz="0" izz="3.0e-04" />
+        </inertial>
         <visual>
             <origin xyz="0 0.0325 0.008" rpy="0 0 0" />
             <geometry>
@@ -55,16 +66,45 @@
 
     <joint name="${prefix}_Revolute_2_0" type="revolute">
         <origin xyz="0 -0.0325 -0.0088" rpy="0 0 -0.0642" />
-        <axis xyz="0 0 -1" />
         <parent link="${prefix}_Bottom_Plate" />
         <child link="${prefix}_Internal_Rod_1" />
-        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" offset="0" />
+        <axis xyz="0 0 -1" />
         <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" />
+    </joint>
+
+    <link name="${prefix}_External_Rod_1">
+        <inertial>
+            <mass value="0.060" />
+            <origin xyz="0.0173205 0.01 0.004" rpy="0 0 0" />
+            <inertia ixx="2.0e-04" ixy="0" ixz="0" iyy="2.0e-04" iyz="0" izz="2.0e-04" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0.044 0.004" rpy="0 -0 0" />
+            <geometry><mesh filename="package://pincopen/meshes/119.stl" scale="1 1 1" /></geometry>
+            <material name="light_grey"/>
+        </visual>
+    </link>
+
+    <joint name="${prefix}_Revolute_4_0" type="revolute">
+        <origin xyz="0 -0.044 -0.0042" rpy="0 0 -0.0642296" />
+        <parent link="${prefix}_Bottom_Plate" />
+        <child link="${prefix}_External_Rod_1" />
+        <axis xyz="0 0 1" />
+        <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="1.0" />
     </joint>
 
     <link name="${prefix}_Distal_Rod">
+        <inertial>
+            <mass value="0.060" />
+            <origin xyz="0.00258376 -0.00352926 -0.0086" rpy="0 0 0" />
+            <inertia ixx="2.0e-04" ixy="0" ixz="0" iyy="2.0e-04" iyz="0" izz="2.0e-04" />
+        </inertial>
         <visual>
-            <origin xyz="-0.0346 0.0125 -0.0086" rpy="0 0 0" />
+            <origin xyz="-0.034641 0.0125 -0.0086" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://pincopen/meshes/63.stl" scale="1 1 1" />
             </geometry>
@@ -73,26 +113,34 @@
     </link>
 
     <joint name="${prefix}_Revolute_5_0" type="revolute">
-        <origin xyz="0.0346 0.02 0.0165" rpy="0 0 0.0642" />
-        <axis xyz="0 0 1" />
+        <origin xyz="0.034641 0.02 0.0165" rpy="0 0 0.0642" />
         <parent link="${prefix}_Internal_Rod_1" />
         <child link="${prefix}_Distal_Rod" />
-        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" offset="0" />
+        <axis xyz="0 0 1" />
         <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" />
     </joint>
 
     <link name="${prefix}_Removable_Tip_1">
+        <inertial>
+            <mass value="0.040" />
+            <origin xyz="0.00745849 0.0018564 -0.0049" rpy="0 0 0" />
+            <inertia ixx="1.5e-04" ixy="0" ixz="0" iyy="1.5e-04" iyz="0" izz="1.5e-04" />
+        </inertial>
         <visual>
             <origin xyz="-0.0428 0.0147 -0.0049" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://pincopen/meshes/123.stl" scale="1 1 1" />
             </geometry>
-            <material name="light_grey"/>
+            <material name="finger_tip_dark">
+                <color rgba="0.15 0.15 0.15 1" />
+            </material>
         </visual>
         <collision>
             <origin xyz="-0.0428 0.0147 -0.0049" rpy="0 0 0" />
             <geometry>
-                <mesh filename="package://pincopen/meshes/123.stl" scale="1 1 1" />
+                <box size="0.02 0.01 0.01" />
             </geometry>
         </collision>
     </link>
@@ -103,7 +151,14 @@
         <child link="${prefix}_Removable_Tip_1" />
     </joint>
 
+
+    <!-- ==================== FINGER 2 ==================== -->
     <link name="${prefix}_Internal_Rod">
+        <inertial>
+            <mass value="0.080" />
+            <origin xyz="0.0101857 0.0065898 -0.008" rpy="0 0 0" />
+            <inertia ixx="3.0e-04" ixy="0" ixz="0" iyy="3.0e-04" iyz="0" izz="3.0e-04" />
+        </inertial>
         <visual>
             <origin xyz="0 0.0325 -0.008" rpy="0 0 0" />
             <geometry>
@@ -115,16 +170,45 @@
 
     <joint name="${prefix}_Revolute_3_0" type="revolute">
         <origin xyz="0 0.0325 -0.0088" rpy="3.14159 0 0.0642" />
-        <axis xyz="0 0 1" />
         <parent link="${prefix}_Bottom_Plate" />
         <child link="${prefix}_Internal_Rod" />
-        <mimic joint="${prefix}_cam_joint" multiplier="1.0" offset="0" />
+        <axis xyz="0 0 1" />
         <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="1.0" />
+    </joint>
+
+    <link name="${prefix}_External_Rod">
+        <inertial>
+            <mass value="0.060" />
+            <origin xyz="0.0173205 0.01 0.004" rpy="0 0 0" />
+            <inertia ixx="2.0e-04" ixy="0" ixz="0" iyy="2.0e-04" iyz="0" izz="2.0e-04" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0.044 0.004" rpy="0 -0 0" />
+            <geometry><mesh filename="package://pincopen/meshes/79.stl" scale="1 1 1" /></geometry>
+            <material name="light_grey"/>
+        </visual>
+    </link>
+    
+    <joint name="${prefix}_Revolute_6_0" type="revolute">
+        <origin xyz="0 0.044 -0.0042" rpy="0 0 -0.982968" />
+        <parent link="${prefix}_Bottom_Plate" />
+        <child link="${prefix}_External_Rod" />
+        <axis xyz="0 0 1" />
+        <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" />
     </joint>
 
     <link name="${prefix}_Distal_Rod_1">
+        <inertial>
+            <mass value="0.060" />
+            <origin xyz="0.00258376 -0.00352926 0.0086" rpy="0 0 0" />
+            <inertia ixx="2.0e-04" ixy="0" ixz="0" iyy="2.0e-04" iyz="0" izz="2.0e-04" />
+        </inertial>
         <visual>
-            <origin xyz="-0.0346 0.0125 0.0086" rpy="0 0 0" />
+            <origin xyz="-0.034641 0.0125 0.0086" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://pincopen/meshes/71.stl" scale="1 1 1" />
             </geometry>
@@ -133,26 +217,34 @@
     </link>
 
     <joint name="${prefix}_Revolute_7_0" type="revolute">
-        <origin xyz="0.0346 0.02 -0.0165" rpy="0 0 0.0642" />
-        <axis xyz="0 0 -1" />
+        <origin xyz="0.034641 0.02 -0.0165" rpy="0 0 0.0642" />
         <parent link="${prefix}_Internal_Rod" />
         <child link="${prefix}_Distal_Rod_1" />
-        <mimic joint="${prefix}_cam_joint" multiplier="1.0" offset="0" />
+        <axis xyz="0 0 -1" />
         <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
+        <dynamics damping="1.0" friction="0.1"/>
+        <mimic joint="${prefix}_cam_joint" multiplier="1.0" />
     </joint>
 
     <link name="${prefix}_Removable_Tip">
+        <inertial>
+            <mass value="0.040" />
+            <origin xyz="0.00745849 0.0018564 0.0049" rpy="0 0 0" />
+            <inertia ixx="1.5e-04" ixy="0" ixz="0" iyy="1.5e-04" iyz="0" izz="1.5e-04" />
+        </inertial>
         <visual>
             <origin xyz="-0.0428 0.0147 0.0049" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://pincopen/meshes/83.stl" scale="1 1 1" />
             </geometry>
-            <material name="light_grey"/>
+            <material name="finger_tip_dark">
+                <color rgba="0.15 0.15 0.15 1" />
+            </material>
         </visual>
         <collision>
             <origin xyz="-0.0428 0.0147 0.0049" rpy="0 0 0" />
             <geometry>
-                <mesh filename="package://pincopen/meshes/83.stl" scale="1 1 1" />
+                <box size="0.02 0.01 0.01" />
             </geometry>
         </collision>
     </link>
@@ -163,6 +255,8 @@
         <child link="${prefix}_Removable_Tip" />
     </joint>
 
+
+    <!-- ==================== STATIC ATTACHMENTS ==================== -->
     <link name="${prefix}_Top_Plate">
         <visual>
             <origin xyz="4.24018e-05 -0.022 0" rpy="0 -0 0" />
@@ -254,43 +348,18 @@
         <child link="${prefix}_Distal_Shell_1" />
     </joint>
 
-    <link name="${prefix}_External_Rod">
-        <visual>
-            <origin xyz="0 0.044 0.004" rpy="0 -0 0" />
-            <geometry><mesh filename="package://pincopen/meshes/79.stl" scale="1 1 1" /></geometry>
-            <material name="light_grey"/>
-        </visual>
-    </link>
-    <joint name="${prefix}_Revolute_6_0" type="revolute">
-        <origin xyz="0 0.044 -0.0042" rpy="0 0 -0.982968" />
-        <axis xyz="0 0 1" />
-        <parent link="${prefix}_Bottom_Plate" />
-        <child link="${prefix}_External_Rod" />
-        <mimic joint="${prefix}_cam_joint" multiplier="-1.0" offset="0" />
-        <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
-    </joint>
-
-    <link name="${prefix}_External_Rod_1">
-        <visual>
-            <origin xyz="0 0.044 0.004" rpy="0 -0 0" />
-            <geometry><mesh filename="package://pincopen/meshes/119.stl" scale="1 1 1" /></geometry>
-            <material name="light_grey"/>
-        </visual>
-    </link>
-    <joint name="${prefix}_Revolute_4_0" type="revolute">
-        <origin xyz="0 -0.044 -0.0042" rpy="0 0 -0.0642296" />
-        <axis xyz="0 0 1" />
-        <parent link="${prefix}_Bottom_Plate" />
-        <child link="${prefix}_External_Rod_1" />
-        <mimic joint="${prefix}_cam_joint" multiplier="1.0" offset="0" />
-        <limit effort="10" velocity="2.0" lower="-1.57" upper="1.57" />
-    </joint>
-
     <link name="${prefix}_Tip_Support">
+        <inertial>
+            <mass value="0.030" />
+            <origin xyz="0.00385164 0.0032358 0.00350015" rpy="0 0 0" />
+            <inertia ixx="1.0e-04" ixy="0" ixz="0" iyy="1.0e-04" iyz="0" izz="1.0e-04" />
+        </inertial>
         <visual>
             <origin xyz="-0.051641 0.00775 0.0035" rpy="0 -0 0" />
             <geometry><mesh filename="package://pincopen/meshes/95.stl" scale="1 1 1" /></geometry>
-            <material name="light_grey"/>
+            <material name="finger_support_dark">
+                <color rgba="0.25 0.25 0.25 1" />
+            </material>
         </visual>
     </link>
     <joint name="${prefix}_Fastened_7_0" type="fixed">
@@ -300,10 +369,17 @@
     </joint>
 
     <link name="${prefix}_Tip_Support_1">
+        <inertial>
+            <mass value="0.030" />
+            <origin xyz="0.00385164 0.0032358 -0.00349985" rpy="0 0 0" />
+            <inertia ixx="1.0e-04" ixy="0" ixz="0" iyy="1.0e-04" iyz="0" izz="1.0e-04" />
+        </inertial>
         <visual>
             <origin xyz="-0.051641 0.00775 -0.0035" rpy="0 -0 0" />
             <geometry><mesh filename="package://pincopen/meshes/99.stl" scale="1 1 1" /></geometry>
-            <material name="light_grey"/>
+            <material name="finger_support_dark">
+                <color rgba="0.25 0.25 0.25 1" />
+            </material>
         </visual>
     </link>
     <joint name="${prefix}_Fastened_3_0" type="fixed">
@@ -311,6 +387,9 @@
         <parent link="${prefix}_Removable_Tip_1" />
         <child link="${prefix}_Tip_Support_1" />
     </joint>
+
+    <!-- Note - Mimic joint behavior is handled by gazebo_ros2_control which reads
+         the <mimic> tags from URDF. The mimic plugins are no longer needed. -->
 
   </xacro:macro>
 </robot>

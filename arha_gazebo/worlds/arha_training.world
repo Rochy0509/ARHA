@@ -7,6 +7,7 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
       <real_time_update_rate>1000</real_time_update_rate>
+      <gravity>0 0 -9.81</gravity>
     </physics>
 
     <!-- Lighting -->
@@ -38,10 +39,16 @@
           <surface>
             <friction>
               <ode>
-                <mu>100</mu>
-                <mu2>50</mu2>
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
               </ode>
             </friction>
+            <contact>
+              <ode>
+                <min_depth>0.001</min_depth>
+                <max_vel>0.1</max_vel>
+              </ode>
+            </contact>
           </surface>
         </collision>
         <visual name="visual">

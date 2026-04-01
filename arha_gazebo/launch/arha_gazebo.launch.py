@@ -1,11 +1,11 @@
 import os
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction, SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler, TimerAction, SetEnvironmentVariable, IncludeLaunchDescription
 from launch.event_handlers import OnProcessExit
+from launch.substitutions import Command, LaunchConfiguration
+from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
-from launch.substitutions import Command
-from ament_index_python.packages import get_package_share_directory
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
@@ -14,11 +14,30 @@ def generate_launch_description():
     arha_gazebo_path = get_package_share_directory('arha_gazebo')
     gazebo_ros_path = get_package_share_directory('gazebo_ros')
     arha_description_share = get_package_share_directory('arha_description')
-    robotiq_description_share = get_package_share_directory('robotiq_hande_description')
     realsense_description_share = get_package_share_directory('realsense2_description')
+    pincopen_share = get_package_share_directory('pincopen')
+
+    # Launch Arguments
+    world_arg = DeclareLaunchArgument(
+        'world',
+        default_value=os.path.join(arha_gazebo_path, 'worlds', 'arha_manipulation.world'),
+        description='Path to Gazebo world file'
+    )
+    spawn_x_arg = DeclareLaunchArgument('spawn_x', default_value='0.0', description='Robot spawn x')
+    spawn_y_arg = DeclareLaunchArgument('spawn_y', default_value='0.0', description='Robot spawn y')
+    spawn_z_arg = DeclareLaunchArgument('spawn_z', default_value='0.0', description='Robot spawn z')
+    spawn_roll_arg = DeclareLaunchArgument('spawn_roll', default_value='0.0', description='Robot spawn roll')
+    spawn_pitch_arg = DeclareLaunchArgument('spawn_pitch', default_value='0.0', description='Robot spawn pitch')
+    spawn_yaw_arg = DeclareLaunchArgument('spawn_yaw', default_value='0.0', description='Robot spawn yaw')
 
     # Paths to files
-    world_file = os.path.join(arha_gazebo_path, 'worlds', 'arha_training.world')
+    world_file = LaunchConfiguration('world')
+    spawn_x = LaunchConfiguration('spawn_x')
+    spawn_y = LaunchConfiguration('spawn_y')
+    spawn_z = LaunchConfiguration('spawn_z')
+    spawn_roll = LaunchConfiguration('spawn_roll')
+    spawn_pitch = LaunchConfiguration('spawn_pitch')
+    spawn_yaw = LaunchConfiguration('spawn_yaw')
     xacro_file = os.path.join(arha_gazebo_path, 'urdf', 'arha_with_grippers.urdf.xacro')
     models_path = os.path.join(arha_gazebo_path, 'models')
 
@@ -31,29 +50,39 @@ def generate_launch_description():
         value=':'.join(model_path_list)
     )
 
-    # Robot description - strip XML header/comments and resolve package:// URIs to absolute paths
-    # See: https://github.com/ros-controls/gazebo_ros2_control/issues/295
-    mesh_replacements = (
-        f"sed -e 's#package://arha_description/#{arha_description_share}/#g' "
-        f"-e 's#package://robotiq_hande_description/#{robotiq_description_share}/#g' "
-        f"-e 's#package://realsense2_description/#{realsense_description_share}/#g'"
-    )
-    robot_description = ParameterValue(
-        Command([f'bash -c "xacro {xacro_file} | '
-                 f'perl -0pe \'s/<\\?xml.*?\\?>\\s*//; s/<!--.*?-->//sg; s/\\A\\s+//\' | '
-                 f'{mesh_replacements}"']),
-        value_type=str
-    )
+    # Robot description - resolve package:// URIs to absolute paths for Gazebo Classic
+    # Using python processing for better error visibility and reliability
+    import xacro
+    import re
+    doc = xacro.process_file(xacro_file)
+    robot_description_raw = doc.toxml()
+
+    # Minify XML to bypass the strict 64KB Foxy/Humble ROS2 `--param` parser limit
+    robot_description_min = re.sub(r'>\s+<', '><', robot_description_raw)
+    robot_description_min = re.sub(r'<!--.*?-->', '', robot_description_min, flags=re.DOTALL)
+
+    # Apply mesh replacements (prepend file:// so parser accepts them as absolute paths)
+    robot_description_processed = robot_description_min.replace('package://arha_description/', 'file://' + arha_description_share + '/')
+    robot_description_processed = robot_description_processed.replace('package://realsense2_description/', 'file://' + realsense_description_share + '/')
+    robot_description_processed = robot_description_processed.replace('package://pincopen/', 'file://' + pincopen_share + '/')
+
+    robot_description = {'robot_description': robot_description_processed}
 
     # Robot state publisher with use_sim_time
+    # Note: robot_description is set on the node namespace only to avoid conflicts
+    # with gazebo_ros2_control which cannot handle XML content as parameter overrides
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
+        namespace='robot_state_publisher',
         parameters=[
-            {'robot_description': robot_description},
+            robot_description,
             {'use_sim_time': True}
         ],
-        output='screen'
+        output='screen',
+        remappings=[
+            ('/robot_state_publisher/robot_description', '/robot_description')
+        ]
     )
 
     # Start Gazebo Classic server
@@ -63,7 +92,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'world': world_file,
-            'verbose': 'true',
+            'verbose': 'false',
             'pause': 'false'
         }.items()
     )
@@ -85,15 +114,21 @@ def generate_launch_description():
                 arguments=[
                     '-entity', 'arha',
                     '-topic', '/robot_description',
-                    '-x', '0',
-                    '-y', '0',
-                    '-z', '0.02'
+                    '-x', spawn_x,
+                    '-y', spawn_y,
+                    '-z', spawn_z,
+                    '-R', spawn_roll,
+                    '-P', spawn_pitch,
+                    '-Y', spawn_yaw
                 ],
                 parameters=[{'use_sim_time': True}],
                 output='screen'
             )
         ]
     )
+
+    # Controller config file path
+    controller_config = os.path.join(arha_gazebo_path, 'config', 'gazebo_controllers.yaml')
 
     # Load joint state broadcaster first (5 seconds after spawn)
     load_joint_state_controller = TimerAction(
@@ -102,7 +137,7 @@ def generate_launch_description():
             Node(
                 package='controller_manager',
                 executable='spawner',
-                arguments=['joint_state_broadcaster'],
+                arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
                 parameters=[{'use_sim_time': True}],
                 output='screen'
             )
@@ -136,14 +171,17 @@ def generate_launch_description():
         ]
     )
 
-    # Load gripper controllers (8 seconds)
     load_left_gripper_controller = TimerAction(
-        period=8.0,
+        period=8.5,
         actions=[
             Node(
                 package='controller_manager',
                 executable='spawner',
-                arguments=['left_gripper_controller'],
+                arguments=[
+                    'left_gripper_controller',
+                    '--controller-manager', '/controller_manager',
+                    '--controller-manager-timeout', '120'
+                ],
                 parameters=[{'use_sim_time': True}],
                 output='screen'
             )
@@ -151,19 +189,31 @@ def generate_launch_description():
     )
 
     load_right_gripper_controller = TimerAction(
-        period=8.5,
+        period=9.0,
         actions=[
             Node(
                 package='controller_manager',
                 executable='spawner',
-                arguments=['right_gripper_controller'],
+                arguments=[
+                    'right_gripper_controller',
+                    '--controller-manager', '/controller_manager',
+                    '--controller-manager-timeout', '120'
+                ],
                 parameters=[{'use_sim_time': True}],
                 output='screen'
             )
         ]
     )
 
+
     return LaunchDescription([
+        world_arg,
+        spawn_x_arg,
+        spawn_y_arg,
+        spawn_z_arg,
+        spawn_roll_arg,
+        spawn_pitch_arg,
+        spawn_yaw_arg,
         gazebo_model_path,
         robot_state_publisher,
         start_gazebo_server,
