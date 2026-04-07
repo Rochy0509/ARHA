@@ -118,6 +118,17 @@ class ArhaHardwareInterface : public hardware_interface::SystemInterface{
         std::map<std::string, std::string> tip_links_;
 
         void initializeDynamics(const std::string& robot_description);
+
+        // Mimic joint support — joints that follow a parent joint with a multiplier
+        struct MimicJointInfo {
+            std::string joint_name;
+            std::string parent_joint_name;
+            double multiplier{1.0};
+            size_t parent_hw_index{0};  // index into hw_position_states_ etc.
+            double position_state{0.0};
+            double position_command{0.0};
+        };
+        std::vector<MimicJointInfo> mimic_joints_;
 };
 }
 

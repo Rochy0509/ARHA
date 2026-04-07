@@ -40,9 +40,22 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
         return hardware_interface::CallbackReturn::ERROR;
     }
 
-    num_joints_ = info.joints.size();
-    
     for (const auto& joint : info.joints){
+        // Collect mimic joints separately — they don't have limb_name/motor_id
+        if (joint.parameters.find("limb_name") == joint.parameters.end()) {
+            if (joint.parameters.count("mimic")) {
+                MimicJointInfo mj;
+                mj.joint_name = joint.name;
+                mj.parent_joint_name = joint.parameters.at("mimic");
+                if (joint.parameters.count("multiplier")) {
+                    mj.multiplier = std::stod(joint.parameters.at("multiplier"));
+                }
+                mimic_joints_.push_back(mj);
+                RCLCPP_INFO(getLogger(), "Mimic joint '%s' follows '%s' (x%.2f)",
+                    mj.joint_name.c_str(), mj.parent_joint_name.c_str(), mj.multiplier);
+            }
+            continue;
+        }
         std::string limb = joint.parameters.at("limb_name");
         std::string motor_id = joint.parameters.at("motor_id");
 
@@ -69,12 +82,39 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
         effort_state_buffer_[limb].writeFromNonRT(std::vector<double>(num_joints, 0.0));
     }
 
+    // Count only real (non-mimic) joints for the flat arrays
+    num_joints_ = 0;
+    for (const auto& limb : limb_names_) {
+        num_joints_ += joint_names_[limb].size();
+    }
+
     hw_position_commands_.resize(num_joints_, 0.0);
     hw_velocity_commands_.resize(num_joints_, 0.0);
 
     hw_position_states_.resize(num_joints_, 0.0);
     hw_velocity_states_.resize(num_joints_, 0.0);
     hw_effort_states_.resize(num_joints_, 0.0);
+
+    // Resolve mimic joint parent indices
+    for (auto& mj : mimic_joints_) {
+        size_t idx = 0;
+        bool found = false;
+        for (const auto& limb : limb_names_) {
+            for (const auto& jn : joint_names_[limb]) {
+                if (jn == mj.parent_joint_name) {
+                    mj.parent_hw_index = idx;
+                    found = true;
+                    break;
+                }
+                idx++;
+            }
+            if (found) break;
+        }
+        if (!found) {
+            RCLCPP_ERROR(getLogger(), "Mimic joint '%s' parent '%s' not found!",
+                mj.joint_name.c_str(), mj.parent_joint_name.c_str());
+        }
+    }
 
 
     // Optional zero on startup
@@ -107,7 +147,7 @@ hardware_interface::CallbackReturn ArhaHardwareInterface::on_init(const hardware
             }
             if (info.hardware_parameters.count(tip_param)) {
                 tip_links_[limb] = info.hardware_parameters.at(tip_param);
-            } else {
+            } else if (limb != "left_gripper" && limb != "right_gripper") {
                 RCLCPP_ERROR(getLogger(), "Missing %s for gravity compensation", tip_param.c_str());
                 gravity_compensation_enabled_ = false;
             }
@@ -295,6 +335,11 @@ std::vector<hardware_interface::CommandInterface> ArhaHardwareInterface::export_
         }
     }
 
+    // Mimic joints — export position command interface (values are ignored, parent drives them)
+    for (auto& mj : mimic_joints_) {
+        command_interfaces.emplace_back(mj.joint_name, hardware_interface::HW_IF_POSITION, &mj.position_command);
+    }
+
     return command_interfaces;
 }
 
@@ -310,6 +355,11 @@ std::vector<hardware_interface::StateInterface> ArhaHardwareInterface::export_st
             state_interfaces.emplace_back(joint_name, hardware_interface::HW_IF_EFFORT, &hw_effort_states_[i]);
             i++;
         }
+    }
+
+    // Mimic joints — export position state interface
+    for (auto& mj : mimic_joints_) {
+        state_interfaces.emplace_back(mj.joint_name, hardware_interface::HW_IF_POSITION, &mj.position_state);
     }
 
     return state_interfaces;
@@ -390,6 +440,11 @@ hardware_interface::return_type ArhaHardwareInterface::read(
         }
     }
 
+    // Update mimic joint states from their parent
+    for (auto& mj : mimic_joints_) {
+        mj.position_state = mj.multiplier * hw_position_states_[mj.parent_hw_index];
+    }
+
     return hardware_interface::return_type::OK;
 }
 
@@ -428,14 +483,18 @@ void ArhaHardwareInterface::pollingLoop() {
             arha_tcp_driver::DriverError err;
 
             if (limb == "left_gripper" || limb == "right_gripper") {
-                uint8_t g_idx = (limb == "right_gripper") ? arha_tcp_driver::GRIPPER_RIGHT : arha_tcp_driver::GRIPPER_LEFT;
+                // Physical wiring: right gripper is on USART6 (index 1), left on USART2 (index 0)
+                uint8_t g_idx = (limb == "left_gripper") ? 0 : 1;
                 uint16_t pos = 0; int16_t speed = 0, load = 0; uint8_t volt = 0, temp = 0;
                 err = driver_->gripperGetStatus(g_idx, pos, speed, load, volt, temp);
                 if (err == arha_tcp_driver::DriverError::SUCCESS && n > 0) {
-                    double open_pos = (limb == "right_gripper") ? 2819.0 : 1775.0;
-                    double close_pos = (limb == "right_gripper") ? 3610.0 : 1155.0;
+                    // Tick values for hardware positions
+                    double open_ticks  = (limb == "left_gripper") ? 2819.0 : 1775.0;
+                    double close_ticks = (limb == "left_gripper") ? 3610.0 : 1155.0;
                     
-                    double rad_pos = -0.57 * (static_cast<double>(pos) - open_pos) / (close_pos - open_pos);
+                    // URDF convention: 0.0 rad = closed, -0.57 rad = open
+                    // Map: close_ticks → 0.0 rad, open_ticks → -0.57 rad
+                    double rad_pos = -0.57 * (static_cast<double>(pos) - close_ticks) / (open_ticks - close_ticks);
                     current_pos[0] = std::max(-0.57, std::min(0.0, rad_pos));
                     current_vel[0] = static_cast<double>(speed); 
                     current_eff[0] = static_cast<double>(load);
@@ -505,7 +564,7 @@ void ArhaHardwareInterface::pollingLoop() {
             }
 
             // Send commands
-            if (position_interface_running_) {
+            if (limb == "left_gripper" || limb == "right_gripper") {
                 std::vector<double> cmds(n);
                 {
                     std::lock_guard<std::mutex> lock(commands_mutex_);
@@ -514,19 +573,37 @@ void ArhaHardwareInterface::pollingLoop() {
                     }
                 }
                 
-                if (limb == "left_gripper" || limb == "right_gripper") {
-                    if (n > 0) {
-                        uint8_t g_idx = (limb == "right_gripper") ? arha_tcp_driver::GRIPPER_RIGHT : arha_tcp_driver::GRIPPER_LEFT;
-                        double open_pos = (limb == "right_gripper") ? 2819.0 : 1775.0;
-                        double close_pos = (limb == "right_gripper") ? 3610.0 : 1155.0;
+                if (n > 0) {
+                    // Physical wiring: right gripper is on USART6 (index 1), left on USART2 (index 0)
+                    uint8_t g_idx = (limb == "left_gripper") ? 0 : 1;
+                    // Tick values for hardware positions
+                    double open_ticks  = (limb == "left_gripper") ? 2819.0 : 1775.0;
+                    double close_ticks = (limb == "left_gripper") ? 3610.0 : 1155.0;
 
-                        double rad_cmd = std::max(-0.57, std::min(0.0, cmds[0]));
-                        double tick_cmd = open_pos + (rad_cmd / -0.57) * (close_pos - open_pos);
-                        
-                        uint16_t cmd_pos = static_cast<uint16_t>(std::round(tick_cmd));
-                        driver_->gripperMoveTo(g_idx, cmd_pos, 0);
+                    // URDF convention: 0.0 rad = closed, -0.57 rad = open
+                    // Map: 0.0 rad → close_ticks, -0.57 rad → open_ticks
+                    double rad_cmd = std::max(-0.57, std::min(0.0, cmds[0]));
+                    double tick_cmd = close_ticks + (rad_cmd / -0.57) * (open_ticks - close_ticks);
+                    
+                    uint16_t cmd_pos = static_cast<uint16_t>(std::round(tick_cmd));
+
+                    if (debug_counter % 20 == 0) {
+                        RCLCPP_INFO(getLogger(), "Gripper %s cmd: rad=%.4f tick=%u g_idx=%u",
+                            limb.c_str(), cmds[0], cmd_pos, g_idx);
                     }
-                } else if (true) {
+
+                    driver_->gripperMoveTo(g_idx, cmd_pos, 500);
+                }
+            } else if (position_interface_running_) {
+                std::vector<double> cmds(n);
+                {
+                    std::lock_guard<std::mutex> lock(commands_mutex_);
+                    for (size_t j = 0; j < n; ++j) {
+                        cmds[j] = directions_[index + j] * hw_position_commands_[index + j];
+                    }
+                }
+                
+                if (true) {
                     static std::map<std::string, std::vector<double>> last_cmds;
                     bool should_send = false;
                     if (last_cmds.find(limb) == last_cmds.end()) {
@@ -622,6 +699,9 @@ void ArhaHardwareInterface::initializeDynamics(const std::string& robot_descript
     }
 
     for (const auto& limb : limb_names_) {
+        if (limb == "left_gripper" || limb == "right_gripper") {
+            continue; // Grippers do not use KDL dynamics
+        }
         if (chains_.find(limb) == chains_.end()) {
             KDL::Chain chain;
             if (!tree.getChain(base_links_[limb], tip_links_[limb], chain)) {

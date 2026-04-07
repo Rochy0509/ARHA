@@ -62,7 +62,7 @@ def launch_setup(context, *args, **kwargs):
             mappings={"use_fake_hardware": use_fake_hardware.perform(context)}
         )
         .robot_description_semantic(
-            file_path=os.path.join(moveit_config_pkg, "config", "arha_description.srdf")
+            file_path=os.path.join(moveit_config_pkg, "config", "arha_description_right_arm.srdf")
         )
         .trajectory_execution(
             file_path=os.path.join(
@@ -140,7 +140,7 @@ def launch_setup(context, *args, **kwargs):
 
     # Load controllers
     load_controllers = []
-    for controller in ["right_arm_controller", "joint_state_broadcaster"]:
+    for controller in ["right_arm_controller", "right_gripper_controller", "joint_state_broadcaster"]:
         load_controllers += [
             ExecuteProcess(
                 cmd=[

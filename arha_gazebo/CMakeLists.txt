@@ -8,7 +8,6 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(arha_description REQUIRED)
-find_package(robotiq_hande_description REQUIRED)
 find_package(realsense2_description REQUIRED)
 
 # Gazebo Classic dependencies

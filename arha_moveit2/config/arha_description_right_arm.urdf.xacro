@@ -7,7 +7,12 @@
     <xacro:include filename="$(find arha_description)/urdf/ARHA.urdf" />
 
     <!-- Gripper and Camera Assembly -->
-    <xacro:include filename="$(find arha_gazebo)/urdf/grippers/pincopen.xacro"/>
+    <xacro:if value="$(arg use_fake_hardware)">
+      <xacro:include filename="$(find arha_gazebo)/urdf/grippers/pincopen.xacro"/>
+    </xacro:if>
+    <xacro:unless value="$(arg use_fake_hardware)">
+      <xacro:include filename="$(find arha_moveit2)/config/grippers/pincopen_stub.xacro"/>
+    </xacro:unless>
     <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
 
     <xacro:pincopen_gripper prefix="right" parent="WristRD_link">

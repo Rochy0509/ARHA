@@ -37,6 +37,10 @@ class TeachPendantNode(Node):
         self.left_action_client = ActionClient(self, FollowJointTrajectory, '/left_arm_controller/follow_joint_trajectory')
         self.right_action_client = ActionClient(self, FollowJointTrajectory, '/right_arm_controller/follow_joint_trajectory')
 
+        # Gripper actions
+        self.left_gripper_client = ActionClient(self, FollowJointTrajectory, '/left_gripper_controller/follow_joint_trajectory')
+        self.right_gripper_client = ActionClient(self, FollowJointTrajectory, '/right_gripper_controller/follow_joint_trajectory')
+
         # Cartesian Path Service
         self.cartesian_client = self.create_client(GetCartesianPath, '/compute_cartesian_path')
         
@@ -56,7 +60,7 @@ class TeachPendantNode(Node):
         req = SwitchController.Request()
         req.start_controllers = start_controllers
         req.stop_controllers = stop_controllers
-        req.strictness = SwitchController.Request.STRICT
+        req.strictness = SwitchController.Request.BEST_EFFORT
         
         future = self.switch_ctrl_client.call_async(req)
         
@@ -72,7 +76,7 @@ class TeachPendantApp:
         self.root = root
         self.node = ros_node
         self.root.title("ARHA Teach Pendant")
-        self.root.geometry("400x500")
+        self.root.geometry("400x600")
         
         # Data storage
         self.waypoints = [] # stores Joint Waypoints
@@ -95,6 +99,22 @@ class TeachPendantApp:
         
         ttk.Button(mode_frame, text="Enable Gravity Comp (Limp)", command=self.enable_gravity_comp).pack(fill="x", padx=10, pady=5)
         ttk.Button(mode_frame, text="Enable Position Control (Rigid)", command=self.enable_position_ctrl).pack(fill="x", padx=10, pady=5)
+        
+        # Gripper Control Frame
+        gripper_frame = ttk.LabelFrame(root, text="Gripper Control (Live)")
+        gripper_frame.pack(fill="x", padx=20, pady=5)
+        
+        left_grip_frame = tk.Frame(gripper_frame)
+        left_grip_frame.pack(fill="x", padx=10, pady=2)
+        tk.Label(left_grip_frame, text="Left Gripper:").pack(side="left")
+        ttk.Button(left_grip_frame, text="Open", command=lambda: self.command_gripper('left', -0.57)).pack(side="left", padx=5)
+        ttk.Button(left_grip_frame, text="Close", command=lambda: self.command_gripper('left', 0.0)).pack(side="left", padx=5)
+
+        right_grip_frame = tk.Frame(gripper_frame)
+        right_grip_frame.pack(fill="x", padx=10, pady=2)
+        tk.Label(right_grip_frame, text="Right Gripper:").pack(side="left")
+        ttk.Button(right_grip_frame, text="Open", command=lambda: self.command_gripper('right', -0.57)).pack(side="left", padx=5)
+        ttk.Button(right_grip_frame, text="Close", command=lambda: self.command_gripper('right', 0.0)).pack(side="left", padx=5)
         
         # Waypoint Frame
         wp_frame = ttk.LabelFrame(root, text="Waypoints")
@@ -134,9 +154,12 @@ class TeachPendantApp:
 
     def enable_gravity_comp(self):
         self.update_status("Switching to Gravity Comp...")
+        # controller manager will handle missing servers via BEST_EFFORT
+        stop_ctrls = ['left_arm_controller', 'right_arm_controller']
+            
         success = self.node.switch_controllers(
             start_controllers=[],
-            stop_controllers=['left_arm_controller', 'right_arm_controller']
+            stop_controllers=stop_ctrls
         )
         if success:
             self.update_status("Mode: Gravity Comp")
@@ -145,14 +168,76 @@ class TeachPendantApp:
 
     def enable_position_ctrl(self):
         self.update_status("Switching to Position Control...")
+        
+        start_ctrls = ['left_arm_controller', 'right_arm_controller']
+
         success = self.node.switch_controllers(
-            start_controllers=['left_arm_controller', 'right_arm_controller'],
+            start_controllers=start_ctrls,
             stop_controllers=[]
         )
         if success:
             self.update_status("Mode: Position Control")
         else:
             self.update_status("Error: Failed to switch to Position Control")
+
+    def command_gripper(self, side, position):
+        goal = FollowJointTrajectory.Goal()
+        
+        # Point 0: Current position (start)
+        pt0 = JointTrajectoryPoint()
+        curr_pos = self.node.current_joint_dict.get(f"{side}_cam_joint", 0.0)
+        pt0.positions = [curr_pos]
+        pt0.velocities = [0.0]
+        pt0.accelerations = [0.0]
+        pt0.time_from_start.sec = 0
+        pt0.time_from_start.nanosec = 0
+        
+        # Point 1: Target position
+        pt1 = JointTrajectoryPoint()
+        pt1.positions = [position]
+        pt1.velocities = [0.0]
+        pt1.accelerations = [0.0]
+        pt1.time_from_start.sec = 1
+        pt1.time_from_start.nanosec = 0
+        
+        goal.trajectory.points = [pt0, pt1]
+        
+        if side == 'left':
+            goal.trajectory.joint_names = ['left_cam_joint']
+            if self.node.left_gripper_client.wait_for_server(timeout_sec=1.0):
+                self.node.left_gripper_client.send_goal_async(goal)
+            else:
+                self.update_status("Error: Left gripper server not ready")
+        else:
+            goal.trajectory.joint_names = ['right_cam_joint']
+            if self.node.right_gripper_client.wait_for_server(timeout_sec=1.0):
+                self.node.right_gripper_client.send_goal_async(goal)
+            else:
+                self.update_status("Error: Right gripper server not ready")
+
+    def _create_gripper_trajectory(self, waypoints, side, total_time):
+        goal = FollowJointTrajectory.Goal()
+        goal.trajectory.joint_names = [f"{side}_cam_joint"]
+        
+        if len(waypoints) == 0:
+            return goal
+            
+        time_per_wp = total_time / len(waypoints)
+        
+        for i, wp in enumerate(waypoints):
+            # If not found, assume 0.0 (Open)
+            val = wp.get(f"{side}_cam_joint", 0.0) 
+            pt = JointTrajectoryPoint()
+            pt.positions = [val]
+            pt.velocities = [0.0]
+            pt.accelerations = [0.0]
+            
+            pt_time = (i + 1) * time_per_wp
+            pt.time_from_start.sec = int(pt_time)
+            pt.time_from_start.nanosec = int((pt_time % 1) * 1e9)
+            goal.trajectory.points.append(pt)
+            
+        return goal
 
     def save_waypoint(self):
         if not self.node.current_joint_dict:
@@ -251,9 +336,11 @@ class TeachPendantApp:
     def send_trajectory(self, waypoints):
         self.update_status("Sending trajectory...")
         
-        if not self.node.left_action_client.wait_for_server(timeout_sec=2.0) or \
-           not self.node.right_action_client.wait_for_server(timeout_sec=2.0):
-            self.update_status("Error: Action servers not ready!")
+        has_left = self.node.left_action_client.wait_for_server(timeout_sec=0.1)
+        has_right = self.node.right_action_client.wait_for_server(timeout_sec=0.1)
+        
+        if not has_left and not has_right:
+            self.update_status("Error: No arm action servers ready!")
             return
 
         time_per_wp = float(self.time_slider.get())
@@ -262,25 +349,30 @@ class TeachPendantApp:
             # -------- LINEAR CARTESIAN PATH --------
             self.update_status("Computing Cartesian path...")
             
-            # Request paths from MoveIt
-            res_left = self._call_cartesian_path('left_arm', 'WristLD_link', self.cartesian_left)
-            res_right = self._call_cartesian_path('right_arm', 'WristRD_link', self.cartesian_right)
-            
-            if not res_left or not res_right or res_left.fraction < 0.9 or res_right.fraction < 0.9:
-                self.update_status(f"Error: Path failed! (L:{res_left.fraction:.2f}, R:{res_right.fraction:.2f})")
-                messagebox.showerror("IK Failure", "Could not compute 100% linear path. Joints may have hit limits.")
-                return
+            if has_left:
+                res_left = self._call_cartesian_path('left_arm', 'WristLD_link', self.cartesian_left)
+                if not res_left or res_left.fraction < 0.9:
+                    self.update_status(f"Error: L Path failed! ({res_left.fraction:.2f})")
+                    return
+                left_goal = FollowJointTrajectory.Goal()
+                left_goal.trajectory = res_left.solution.joint_trajectory
 
-            left_goal = FollowJointTrajectory.Goal()
-            left_goal.trajectory = res_left.solution.joint_trajectory
-            
-            right_goal = FollowJointTrajectory.Goal()
-            right_goal.trajectory = res_right.solution.joint_trajectory
+            if has_right:
+                res_right = self._call_cartesian_path('right_arm', 'WristRD_link', self.cartesian_right)
+                if not res_right or res_right.fraction < 0.9:
+                    self.update_status(f"Error: R Path failed! ({res_right.fraction:.2f})")
+                    return
+                right_goal = FollowJointTrajectory.Goal()
+                right_goal.trajectory = res_right.solution.joint_trajectory
             # ONLY RE-TIME MANUALLY IF WE ARE NOT RUNNING THE NATIVE ISO 10% SCALING LIMIT TEST
             if not (hasattr(self, 'iso_vel_var') and self.iso_vel_var.get()):
                 total_time = time_per_wp * len(waypoints)
                 
-                for goal in [left_goal, right_goal]:
+                goals_to_process = []
+                if has_left: goals_to_process.append(left_goal)
+                if has_right: goals_to_process.append(right_goal)
+                
+                for goal in goals_to_process:
                     num_points = len(goal.trajectory.points)
                     if num_points == 0:
                         continue
@@ -314,8 +406,11 @@ class TeachPendantApp:
             else:
                 # We are directly executing MoveIt's ISO-limited time profile!
                 # Update total_time variable so the GUI thread waits properly
-                if len(right_goal.trajectory.points) > 0:
+                if has_right and len(right_goal.trajectory.points) > 0:
                     last_pt = right_goal.trajectory.points[-1]
+                    total_time = last_pt.time_from_start.sec + last_pt.time_from_start.nanosec * 1e-9
+                elif has_left and len(left_goal.trajectory.points) > 0:
+                    last_pt = left_goal.trajectory.points[-1]
                     total_time = last_pt.time_from_start.sec + last_pt.time_from_start.nanosec * 1e-9
             
         else:
@@ -344,8 +439,17 @@ class TeachPendantApp:
             total_time = time_per_wp * len(waypoints)
 
         # Send async goals
-        self.node.left_action_client.send_goal_async(left_goal)
-        self.node.right_action_client.send_goal_async(right_goal)
+        if has_left:
+            self.node.left_action_client.send_goal_async(left_goal)
+            if self.node.left_gripper_client.wait_for_server(timeout_sec=0.1):
+                left_grip_goal = self._create_gripper_trajectory(waypoints, 'left', total_time)
+                self.node.left_gripper_client.send_goal_async(left_grip_goal)
+                
+        if has_right:
+            self.node.right_action_client.send_goal_async(right_goal)
+            if self.node.right_gripper_client.wait_for_server(timeout_sec=0.1):
+                right_grip_goal = self._create_gripper_trajectory(waypoints, 'right', total_time)
+                self.node.right_gripper_client.send_goal_async(right_grip_goal)
         
         self.update_status(f"Playing... (ETA: {total_time:.1f}s)")
         

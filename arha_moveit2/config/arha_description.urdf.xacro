@@ -8,7 +8,7 @@
     <xacro:include filename="$(find arha_description)/urdf/ARHA.urdf" />
 
     <!-- Gripper and Camera Assembly -->
-    <xacro:include filename="$(find arha_gazebo)/urdf/grippers/pincopen.xacro"/>
+    <xacro:include filename="$(find arha_moveit2)/config/grippers/pincopen_stub.xacro"/>
     <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
 
     <xacro:pincopen_gripper prefix="left" parent="WristLD_link">

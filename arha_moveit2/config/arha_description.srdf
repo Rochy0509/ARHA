@@ -174,4 +174,54 @@
     <disable_collisions link1="WristRD_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="WristRU_link" link2="base_link" reason="Never"/>
     <disable_collisions link1="base_link" link2="chest_link" reason="Adjacent"/>
+    <!-- Left gripper internal collisions -->
+    <disable_collisions link1="left_Removable_Tip" link2="left_Removable_Tip_1" reason="Never"/>
+    <disable_collisions link1="left_Distal_Rod" link2="left_Distal_Rod_1" reason="Never"/>
+    <disable_collisions link1="left_Distal_Shell" link2="left_Distal_Shell_1" reason="Never"/>
+    <disable_collisions link1="left_Internal_Rod" link2="left_Internal_Rod_1" reason="Never"/>
+    <disable_collisions link1="left_External_Rod" link2="left_External_Rod_1" reason="Never"/>
+    <disable_collisions link1="left_Tip_Support" link2="left_Tip_Support_1" reason="Never"/>
+    <disable_collisions link1="left_Removable_Tip" link2="left_Distal_Shell" reason="Adjacent"/>
+    <disable_collisions link1="left_Removable_Tip_1" link2="left_Distal_Shell_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Removable_Tip" link2="left_Tip_Support" reason="Adjacent"/>
+    <disable_collisions link1="left_Removable_Tip_1" link2="left_Tip_Support_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_Top_Plate" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_Cam" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_Internal_Rod" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_Internal_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_External_Rod" reason="Adjacent"/>
+    <disable_collisions link1="left_Bottom_Plate" link2="left_External_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Top_Plate" link2="left_Camera_basement" reason="Adjacent"/>
+    <disable_collisions link1="left_Top_Plate" link2="left_Interface_ARM100" reason="Adjacent"/>
+    <disable_collisions link1="left_Camera_basement" link2="left_Camera_mount_V1" reason="Adjacent"/>
+    <disable_collisions link1="left_Interface_ARM100" link2="left_Hand_adaptor_plate" reason="Adjacent"/>
+    <disable_collisions link1="left_Internal_Rod_1" link2="left_Distal_Rod" reason="Adjacent"/>
+    <disable_collisions link1="left_Internal_Rod" link2="left_Distal_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Distal_Rod" link2="left_Removable_Tip_1" reason="Adjacent"/>
+    <disable_collisions link1="left_Distal_Rod_1" link2="left_Removable_Tip" reason="Adjacent"/>
+    <!-- Right gripper internal collisions -->
+    <disable_collisions link1="right_Removable_Tip" link2="right_Removable_Tip_1" reason="Never"/>
+    <disable_collisions link1="right_Distal_Rod" link2="right_Distal_Rod_1" reason="Never"/>
+    <disable_collisions link1="right_Distal_Shell" link2="right_Distal_Shell_1" reason="Never"/>
+    <disable_collisions link1="right_Internal_Rod" link2="right_Internal_Rod_1" reason="Never"/>
+    <disable_collisions link1="right_External_Rod" link2="right_External_Rod_1" reason="Never"/>
+    <disable_collisions link1="right_Tip_Support" link2="right_Tip_Support_1" reason="Never"/>
+    <disable_collisions link1="right_Removable_Tip" link2="right_Distal_Shell" reason="Adjacent"/>
+    <disable_collisions link1="right_Removable_Tip_1" link2="right_Distal_Shell_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Removable_Tip" link2="right_Tip_Support" reason="Adjacent"/>
+    <disable_collisions link1="right_Removable_Tip_1" link2="right_Tip_Support_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_Top_Plate" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_Cam" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_Internal_Rod" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_Internal_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_External_Rod" reason="Adjacent"/>
+    <disable_collisions link1="right_Bottom_Plate" link2="right_External_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Top_Plate" link2="right_Camera_basement" reason="Adjacent"/>
+    <disable_collisions link1="right_Top_Plate" link2="right_Interface_ARM100" reason="Adjacent"/>
+    <disable_collisions link1="right_Camera_basement" link2="right_Camera_mount_V1" reason="Adjacent"/>
+    <disable_collisions link1="right_Interface_ARM100" link2="right_Hand_adaptor_plate" reason="Adjacent"/>
+    <disable_collisions link1="right_Internal_Rod_1" link2="right_Distal_Rod" reason="Adjacent"/>
+    <disable_collisions link1="right_Internal_Rod" link2="right_Distal_Rod_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Distal_Rod" link2="right_Removable_Tip_1" reason="Adjacent"/>
+    <disable_collisions link1="right_Distal_Rod_1" link2="right_Removable_Tip" reason="Adjacent"/>
 </robot>
