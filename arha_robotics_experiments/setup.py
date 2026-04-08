@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name + '/config', ['config/picking_objects.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,6 +26,7 @@ setup(
             'iso_path_accuracy = arha_robotics_experiments.iso_path_accuracy:main',
             'tc05_repeatability = arha_robotics_experiments.tc05_repeatability:main',
             'tc04_velocity_limit = arha_robotics_experiments.tc04_velocity_limit:main',
+            'dual_camera_picker = arha_robotics_experiments.dual_camera_picker:main',
         ],
     },
 )

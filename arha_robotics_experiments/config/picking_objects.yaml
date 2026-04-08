@@ -1,0 +1,36 @@
+objects:
+  alcohol_bottle:
+    tag_id: 6
+    # 2cm UP from the tag. (Y axis points down on AprilTags, so UP is negative)
+    grasp_offset: [0.0, -0.02, -0.03]
+    grasp_rpy: [0.0, 0.0, 0.0]
+    approach_distance: 0.15
+
+  black_box:
+    tag_id: 5
+    # 2cm RIGHT from the tag. (X axis points right)
+    grasp_offset: [0.02, 0.0, -0.05]
+    grasp_rpy: [0.0, 0.0, 0.0]
+    approach_distance: 0.15
+
+robot_dynamics:
+  # Base motion parameters used by MoveGroup
+  velocity_scaling: 0.3
+  acceleration_scaling: 0.3
+  planner_id: "RRTstar"
+
+obstacles:
+  # Defines massive collision bounding boxes anchored around specific AprilTags
+  # shelf space: 73cm width, 34cm height. Assumed 40cm depth.
+  shelf_1:
+    tag_id: 3
+    size: [0.73, 0.40, 0.02] 
+    # The standard AprilTag frame has Z pointing INTO the shelf, Y pointing down.
+    # The tag hangs below the shelf, so we offset the box slightly UP (-Y) 
+    # and DEEP into the shelf (+Z half of 40cm depth)
+    offset: [0.0, -0.05, 0.20]
+    
+  shelf_2:
+    tag_id: 4
+    size: [0.73, 0.40, 0.02]
+    offset: [0.0, -0.05, 0.20]

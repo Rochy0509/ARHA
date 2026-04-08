@@ -6,7 +6,14 @@ from tkinter import ttk, messagebox
 
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import JointState
+import cv2
+import numpy as np
+from cv_bridge import CvBridge
+from PIL import Image as PILImage, ImageTk
+import yaml
+import os
+from ament_index_python.packages import get_package_share_directory
+from sensor_msgs.msg import JointState, Image as RosImage
 from controller_manager_msgs.srv import SwitchController
 from trajectory_msgs.msg import JointTrajectoryPoint
 from control_msgs.action import FollowJointTrajectory
@@ -48,6 +55,57 @@ class TeachPendantNode(Node):
         self.tf_buffer = tf2_ros.Buffer(cache_time=rclpy.time.Duration(seconds=5.0))
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
+        # Camera setups
+        self.bridge = CvBridge()
+        self.tag_dict = {}
+        try:
+            pkg_share = get_package_share_directory("arha_robotics_experiments")
+            yaml_path = os.path.join(pkg_share, "config", "picking_objects.yaml")
+            with open(yaml_path, 'r') as f:
+                cfg = yaml.safe_load(f)
+            for name, data in cfg.get("objects", {}).items():
+                self.tag_dict[data.get("tag_id")] = name
+            for name, data in cfg.get("obstacles", {}).items():
+                self.tag_dict[data.get("tag_id")] = name
+        except Exception as e:
+            self.get_logger().error(f"Could not load tags: {e}")
+            
+        self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
+        self.aruco_params = cv2.aruco.DetectorParameters()
+        self.head_img_rgb = None
+        self.wrist_img_rgb = None
+        self.head_sub = self.create_subscription(RosImage, '/head_camera/color/image_raw', self.head_cam_cb, 5)
+        self.wrist_sub = self.create_subscription(RosImage, '/camera_right_wrist/color/image_raw', self.wrist_cam_cb, 5)
+
+    def process_image(self, msg):
+        try:
+            cv_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+            corners, ids, _ = cv2.aruco.detectMarkers(gray, self.aruco_dict, parameters=self.aruco_params)
+            
+            if ids is not None:
+                cv2.aruco.drawDetectedMarkers(cv_img, corners, ids)
+                for i, tag_id_arr in enumerate(ids):
+                    tag_id = tag_id_arr[0]
+                    name = self.tag_dict.get(tag_id, f"Tag {tag_id}")
+                    top_left = corners[i][0][0]
+                    cv2.putText(cv_img, name, (int(top_left[0]), int(top_left[1]) - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+            rgb = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+            return rgb
+        except Exception as e:
+            self.get_logger().warn(f"Image error: {e}", throttle_duration_sec=2.0)
+            return None
+
+    def head_cam_cb(self, msg):
+        res = self.process_image(msg)
+        if res is not None: self.head_img_rgb = res
+            
+    def wrist_cam_cb(self, msg):
+        res = self.process_image(msg)
+        if res is not None: self.wrist_img_rgb = res
+
     def joint_state_callback(self, msg):
         for name, pos in zip(msg.name, msg.position):
             self.current_joint_dict[name] = pos
@@ -76,7 +134,7 @@ class TeachPendantApp:
         self.root = root
         self.node = ros_node
         self.root.title("ARHA Teach Pendant")
-        self.root.geometry("400x600")
+        self.root.geometry("800x800")
         
         # Data storage
         self.waypoints = [] # stores Joint Waypoints
@@ -115,6 +173,21 @@ class TeachPendantApp:
         tk.Label(right_grip_frame, text="Right Gripper:").pack(side="left")
         ttk.Button(right_grip_frame, text="Open", command=lambda: self.command_gripper('right', -0.57)).pack(side="left", padx=5)
         ttk.Button(right_grip_frame, text="Close", command=lambda: self.command_gripper('right', 0.0)).pack(side="left", padx=5)
+
+        # Camera Feeds Frame
+        cam_frame = ttk.LabelFrame(root, text="Live Cameras")
+        cam_frame.pack(fill="x", padx=20, pady=5)
+        
+        cam_container = tk.Frame(cam_frame)
+        cam_container.pack(fill="x", padx=5, pady=5)
+        
+        self.head_cam_lbl = tk.Label(cam_container, text="Head Cam: Offline / Waiting...")
+        self.head_cam_lbl.pack(side="left", expand=True)
+        
+        self.wrist_cam_lbl = tk.Label(cam_container, text="Wrist Cam: Offline / Waiting...")
+        self.wrist_cam_lbl.pack(side="right", expand=True)
+
+        self.root.after(100, self.refresh_cameras)
         
         # Waypoint Frame
         wp_frame = ttk.LabelFrame(root, text="Waypoints")
@@ -147,6 +220,22 @@ class TeachPendantApp:
 
         ttk.Button(exec_frame, text="▶️ Play Waypoints sequence", command=self.play_waypoints).pack(fill="x", padx=10, pady=5)
         ttk.Button(exec_frame, text="🏠 Send Arms Home", command=self.send_home).pack(fill="x", padx=10, pady=5)
+
+    def refresh_cameras(self):
+        # Safely pull memory block from the subscriber thread
+        if hasattr(self.node, 'head_img_rgb') and self.node.head_img_rgb is not None:
+            img = PILImage.fromarray(self.node.head_img_rgb)
+            img = img.resize((320, 240))
+            self.tk_head = ImageTk.PhotoImage(img) 
+            self.head_cam_lbl.config(image=self.tk_head, text="")
+            
+        if hasattr(self.node, 'wrist_img_rgb') and self.node.wrist_img_rgb is not None:
+            img = PILImage.fromarray(self.node.wrist_img_rgb)
+            img = img.resize((320, 240))
+            self.tk_wrist = ImageTk.PhotoImage(img)
+            self.wrist_cam_lbl.config(image=self.tk_wrist, text="")
+            
+        self.root.after(100, self.refresh_cameras)
 
     def update_status(self, msg):
         self.status_var.set(f"Status: {msg}")
