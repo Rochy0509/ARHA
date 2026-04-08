@@ -85,4 +85,68 @@
     <disable_collisions link1="right_Internal_Rod" link2="right_Distal_Rod_1" reason="Adjacent"/>
     <disable_collisions link1="right_Distal_Rod" link2="right_Removable_Tip_1" reason="Adjacent"/>
     <disable_collisions link1="right_Distal_Rod_1" link2="right_Removable_Tip" reason="Adjacent"/>
+    <!-- Left Arm Disclosures for static pose -->
+    <disable_collisions link1="ShoulderLU_link" link2="chest_link" reason="Adjacent"/>
+    <disable_collisions link1="ShoulderLD_link" link2="ShoulderLU_link" reason="Adjacent"/>
+    <disable_collisions link1="ElbowLU_link" link2="ShoulderLD_link" reason="Adjacent"/>
+    <disable_collisions link1="ElbowLD_link" link2="ElbowLU_link" reason="Adjacent"/>
+    <disable_collisions link1="WristLU_link" link2="ElbowLD_link" reason="Adjacent"/>
+    <disable_collisions link1="WristLD_link" link2="WristLU_link" reason="Adjacent"/>
+    <disable_collisions link1="ShoulderLU_link" link2="base_link" reason="Never"/>
+    <disable_collisions link1="ShoulderLD_link" link2="base_link" reason="Never"/>
+    <disable_collisions link1="ElbowLU_link" link2="base_link" reason="Never"/>
+    <disable_collisions link1="ElbowLD_link" link2="base_link" reason="Never"/>
+    <disable_collisions link1="WristLU_link" link2="base_link" reason="Never"/>
+    <disable_collisions link1="WristLD_link" link2="base_link" reason="Never"/>
+
+    <!-- Head Assembly Collisions -->
+    <disable_collisions link1="chest_link" link2="head_part_1_1" reason="Adjacent"/>
+    <disable_collisions link1="chest_link" link2="head_part_1_2" reason="Never"/>
+    <disable_collisions link1="chest_link" link2="head_part_1_3" reason="Never"/>
+    <disable_collisions link1="chest_link" link2="head_part_1_4" reason="Never"/>
+    <disable_collisions link1="chest_link" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="chest_link" link2="head_part_1" reason="Never"/>
+
+    <disable_collisions link1="head_part_1_1" link2="head_part_1_2" reason="Adjacent"/>
+    <disable_collisions link1="head_part_1_1" link2="head_part_1_3" reason="Never"/>
+    <disable_collisions link1="head_part_1_1" link2="head_part_1_4" reason="Never"/>
+    <disable_collisions link1="head_part_1_1" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="head_part_1_1" link2="head_part_1" reason="Never"/>
+
+    <disable_collisions link1="head_part_1_2" link2="head_part_1_3" reason="Never"/>
+    <disable_collisions link1="head_part_1_2" link2="head_part_1_4" reason="Adjacent"/>
+    <disable_collisions link1="head_part_1_2" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="head_part_1_2" link2="head_part_1" reason="Never"/>
+
+    <disable_collisions link1="head_part_1_3" link2="head_part_1_4" reason="Adjacent"/>
+    <disable_collisions link1="head_part_1_3" link2="head_part_1_5" reason="Adjacent"/>
+    <disable_collisions link1="head_part_1_3" link2="head_part_1" reason="Adjacent"/>
+
+    <disable_collisions link1="head_part_1_4" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="head_part_1_4" link2="head_part_1" reason="Never"/>
+
+    <disable_collisions link1="head_part_1_5" link2="head_part_1" reason="Never"/>
+
+    <disable_collisions link1="ShoulderLU_link" link2="head_part_1_1" reason="Never"/>
+    <disable_collisions link1="ShoulderLU_link" link2="head_part_1_2" reason="Never"/>
+    <disable_collisions link1="ShoulderRU_link" link2="head_part_1_1" reason="Never"/>
+    <disable_collisions link1="ShoulderRU_link" link2="head_part_1_2" reason="Never"/>
+
+    <!-- Head Camera Collisions -->
+    <disable_collisions link1="head_camera_link" link2="head_part_1_1" reason="Never"/>
+    <disable_collisions link1="head_camera_link" link2="head_part_1_2" reason="Never"/>
+    <disable_collisions link1="head_camera_link" link2="head_part_1_3" reason="Never"/>
+    <disable_collisions link1="head_camera_link" link2="head_part_1_4" reason="Adjacent"/>
+    <disable_collisions link1="head_camera_link" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="head_camera_link" link2="head_part_1" reason="Never"/>
+    <disable_collisions link1="head_camera_link" link2="chest_link" reason="Never"/>
+
+    <!-- Head vs Base Link Collisions -->
+    <disable_collisions link1="base_link" link2="head_part_1_1" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_part_1_2" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_part_1_3" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_part_1_4" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_part_1_5" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_part_1" reason="Never"/>
+    <disable_collisions link1="base_link" link2="head_camera_link" reason="Never"/>
 </robot>
