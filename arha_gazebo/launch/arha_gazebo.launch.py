@@ -16,6 +16,7 @@ def generate_launch_description():
     arha_description_share = get_package_share_directory('arha_description')
     realsense_description_share = get_package_share_directory('realsense2_description')
     pincopen_share = get_package_share_directory('pincopen')
+    head_share = get_package_share_directory('head')
 
     # Launch Arguments
     world_arg = DeclareLaunchArgument(
@@ -65,6 +66,7 @@ def generate_launch_description():
     robot_description_processed = robot_description_min.replace('package://arha_description/', 'file://' + arha_description_share + '/')
     robot_description_processed = robot_description_processed.replace('package://realsense2_description/', 'file://' + realsense_description_share + '/')
     robot_description_processed = robot_description_processed.replace('package://pincopen/', 'file://' + pincopen_share + '/')
+    robot_description_processed = robot_description_processed.replace('package://head/', 'file://' + head_share + '/')
 
     robot_description = {'robot_description': robot_description_processed}
 

@@ -11,6 +11,17 @@
     <xacro:include filename="$(find arha_moveit2)/config/grippers/pincopen_stub.xacro"/>
     <xacro:include filename="$(find realsense2_description)/urdf/_d435.urdf.xacro" />
 
+    <!-- Add the Head assembly -->
+    <xacro:include filename="$(find head)/urdf/head.xacro"/>
+    <xacro:arha_head parent="chest_link">
+      <origin xyz="-0.1 0 0.08" rpy="0 0 0" />
+    </xacro:arha_head>
+
+    <!-- Mount D435 Camera to the Head -->
+    <xacro:sensor_d435 parent="head_part_1_4" name="head_camera" use_nominal_extrinsics="false" add_plug="false" use_mesh="true">
+      <origin xyz="-0.18 -0.12 -0.037" rpy="1.5708 0 -1.5708"/>
+    </xacro:sensor_d435>
+
     <xacro:pincopen_gripper prefix="left" parent="WristLD_link">
       <origin xyz="0 0 0.13" rpy="1.5708 -1.5708 3.14159" />
     </xacro:pincopen_gripper>
